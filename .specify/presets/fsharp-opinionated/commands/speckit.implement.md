@@ -1,15 +1,6 @@
 ---
-name: speckit-implement
-description: Execute all tasks from the task breakdown to build the feature.
-compatibility: Requires spec-kit project structure with .specify/ directory
-metadata:
-  author: github-spec-kit
-  source: preset:fsharp-opinionated
-user-invocable: true
-disable-model-invocation: false
+description: "Implement tasks with synthetic-evidence marking discipline (Principle IV)."
 ---
-
-# Speckit Implement Skill
 
 # /speckit.implement
 

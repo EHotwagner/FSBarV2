@@ -1,0 +1,123 @@
+schema_version: "1.0"
+
+# Dependency topology for tasks.md.
+#
+# Every Tnnn id that appears in tasks.md MUST appear as a key here, even if
+# its deps list is empty. compute-task-graph.py refuses to proceed on
+# dangling references or orphaned tasks.
+#
+# Phase-checkpoint edges are auto-injected by the script (every task in
+# Phase N+1 implicitly depends on the last task of Phase N). Only write
+# non-phase cross-edges here.
+#
+# Phase boundaries (last task per phase, the implicit checkpoint):
+#   Phase 1 Setup            → T005
+#   Phase 2 Foundation       → T017
+#   Phase 3 US1 (carve-outs) → T032
+#   Phase 4 US3 (operator)   → T051
+#   Phase 5 US2 (worked ex)  → T054
+#   Phase 6 US4 (Cmd insp)   → T055
+#   Phase 7 US5 (snapshot)   → T057
+#   Phase 8 Polish           → T062
+
+tasks:
+  # Phase 1 — Setup
+  T001: []
+  T002: []
+  T003: []
+  # T004: solution registration + readiness scaffolding needs both fsproj files
+  T004: [T002, T003]
+  T005: []
+
+  # Phase 2 — Foundation
+  T006: []
+  T007: []
+  T008: []
+  T009: []
+  T010: []
+  T011: []
+  T012: []
+  T013: []
+  # T014: FSI exercise reads every drafted .fsi
+  T014: [T006, T007, T008, T009, T010, T011, T012, T013]
+  # T015: initial baselines computed from .fsi set
+  T015: [T006, T007, T008, T009, T010, T011, T012, T013]
+  T016: []
+  T017: []
+
+  # Phase 3 — US1 carve-out closures
+  T018: []
+  T019: []
+  T020: []
+  T021: []
+  T022: []
+  T023: []
+  T024: []
+  T025: []
+  T026: []
+  T027: []
+  T028: []
+  # T029: Update impl follows UpdateTests + Model + Msg + Cmd impls
+  T029: [T019, T026, T027, T028]
+  # T030: View impl follows ViewTests + Model
+  T030: [T020, T026]
+  # T031: TestRuntime follows RuntimeTests + Update impl
+  T031: [T021, T029]
+  # T032: readiness regen needs fixtures + carve-out tests + TestRuntime green
+  T032: [T018, T022, T023, T024, T025, T031]
+
+  # Phase 4 — US3 operator-visible unchanged
+  T033: []
+  T034: []
+  # T035: MvuRuntime needs Update + View
+  T035: [T029, T030]
+  T036: []
+  T037: []
+  T038: []
+  T039: []
+  T040: []
+  T041: []
+  # T042: BrokerState.Binding wraps MvuRuntime.Host
+  T042: [T035]
+  # T043: CoordinatorService Impl uses Binding (after gRPC tests authored)
+  T043: [T034, T042]
+  # T044: ScriptingService Impl uses Binding (after gRPC tests authored)
+  T044: [T034, T042]
+  # T045: DashboardView/LobbyView accept Model fragments
+  T045: [T026]
+  # T046: TickLoop wires Host + updated views
+  T046: [T035, T045]
+  # T047: composition root binds runtime + adapters + Binding + reduced TickLoop
+  T047: [T035, T036, T037, T038, T039, T040, T041, T042, T043, T044, T046]
+  # T048: delete Hub after guard test authored, services refactored, program updated
+  T048: [T033, T043, T044, T047]
+  # T049: Broker.Protocol.Tests rebound through Binding
+  T049: [T042, T043, T044]
+  # T050: Broker.Tui.Tests rebound for reduced TickLoop
+  T050: [T046]
+  # T051: integration tests against live runtime, post-Hub-removal
+  T051: [T047, T048]
+
+  # Phase 5 — US2 maintainer worked example
+  T052: []
+  # T053: implement worked-example feature
+  T053: [T052]
+  # T054: quickstart Story 2 walkthrough cites the worked example
+  T054: [T053]
+
+  # Phase 6 — US4 Cmd-inspection coverage
+  T055: []
+
+  # Phase 7 — US5 snapshot regression fixtures
+  T056: []
+  # T057: comparison test + fixture-update doc reads the checked-in fixtures
+  T057: [T056]
+
+  # Phase 8 — Integration & Polish
+  T058: []
+  T059: []
+  T060: []
+  # T061: evidence audit after graph compute clean
+  T061: [T060]
+  # T062: PR description finalisation after audit
+  T062: [T061]

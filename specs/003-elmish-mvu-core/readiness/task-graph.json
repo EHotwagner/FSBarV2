@@ -1,0 +1,1020 @@
+{
+  "schema_version": "1.0",
+  "verdict": "ok",
+  "errors": [],
+  "warnings": [],
+  "cycles": [],
+  "tasks": [
+    {
+      "id": "T001",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 1,
+      "story": null,
+      "tier": null,
+      "parallel": true,
+      "title": "Pin the `Elmish` package (latest stable 4.x) in `Directory.Packages.props` per the repo's central-package-management discipline (plan \u00a7Technical Context, spec Assumptions)",
+      "explicit_deps": [],
+      "phase_deps": [],
+      "root_cause": []
+    },
+    {
+      "id": "T002",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 1,
+      "story": null,
+      "tier": null,
+      "parallel": true,
+      "title": "Scaffold `src/Broker.Mvu/Broker.Mvu.fsproj` with `ProjectReference`s to `Broker.Core` and `PackageReference`s to `Elmish` + `Spectre.Console` (plan \u00a7Project Structure)",
+      "explicit_deps": [],
+      "phase_deps": [],
+      "root_cause": []
+    },
+    {
+      "id": "T003",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 1,
+      "story": null,
+      "tier": null,
+      "parallel": true,
+      "title": "Scaffold `tests/Broker.Mvu.Tests/Broker.Mvu.Tests.fsproj` with refs to `Broker.Mvu`, `Broker.Protocol`, and Expecto (plan \u00a7Testing)",
+      "explicit_deps": [],
+      "phase_deps": [],
+      "root_cause": []
+    },
+    {
+      "id": "T004",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 1,
+      "story": null,
+      "tier": null,
+      "parallel": false,
+      "title": "Register both new projects in `FSBarV2.sln` and create the readiness scaffolding `specs/003-elmish-mvu-core/readiness/{transcripts,artefacts,baselines}/`",
+      "explicit_deps": [
+        "T002",
+        "T003"
+      ],
+      "phase_deps": [],
+      "root_cause": []
+    },
+    {
+      "id": "T005",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 1,
+      "story": null,
+      "tier": null,
+      "parallel": true,
+      "title": "Record feature Tier 1, affected layer, public-API impact, and required evidence obligations to `specs/003-elmish-mvu-core/readiness/feature-tier.md`",
+      "explicit_deps": [],
+      "phase_deps": [],
+      "root_cause": []
+    },
+    {
+      "id": "T006",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 2,
+      "story": null,
+      "tier": null,
+      "parallel": true,
+      "title": "Draft public `.fsi` for `Broker.Mvu.Cmd`, `Broker.Mvu.Msg`, `Broker.Mvu.Model` (the value types \u2014 see contracts/public-fsi.md \u00a7Cmd/\u00a7Msg/\u00a7Model)",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T005"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T007",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 2,
+      "story": null,
+      "tier": null,
+      "parallel": true,
+      "title": "Draft public `.fsi` for `Broker.Mvu.Update` and `Broker.Mvu.View` (the pure transition + projection \u2014 contracts/public-fsi.md \u00a7Update/\u00a7View)",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T005"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T008",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 2,
+      "story": null,
+      "tier": null,
+      "parallel": true,
+      "title": "Draft public `.fsi` for `Broker.Mvu.MvuRuntime` (production Host + AdapterSet) and `Broker.Mvu.TestRuntime` (synchronous handle) \u2014 contracts/public-fsi.md \u00a7MvuRuntime/\u00a7TestRuntime",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T005"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T009",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 2,
+      "story": null,
+      "tier": null,
+      "parallel": true,
+      "title": "Draft the six adapter-interface `.fsi` modules under `Broker.Mvu/Adapters/` \u2014 `AuditAdapter`, `CoordinatorAdapter`, `ScriptingAdapter`, `VizAdapter`, `TimerAdapter`, `LifecycleAdapter` (contracts/public-fsi.md \u00a7Adapter-interface modules)",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T005"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T010",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 2,
+      "story": null,
+      "tier": null,
+      "parallel": true,
+      "title": "Draft `Broker.Mvu.Testing.Fixtures.fsi` with the synthetic-fixture banner per Principle IV (contracts/public-fsi.md \u00a7Fixtures, data-model \u00a76.1)",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T005"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T011",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 2,
+      "story": null,
+      "tier": null,
+      "parallel": true,
+      "title": "Draft reduced `Broker.Protocol.BrokerState.fsi` (only `Binding`, `bind`, `postMsg`, `awaitResponse`, `OwnerRule`) and updated `HighBarCoordinatorService.fsi` + `ScriptingClientService.fsi` (ctor takes `Binding` not `Hub`)",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T005"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T012",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 2,
+      "story": null,
+      "tier": null,
+      "parallel": true,
+      "title": "Draft reduced `Broker.Tui.TickLoop.fsi` (keypress-poll-and-render shell only) and updated `DashboardView.fsi` + `LobbyView.fsi` (accept Model fragments)",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T005"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T013",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 2,
+      "story": null,
+      "tier": null,
+      "parallel": true,
+      "title": "Draft the six production-adapter implementation `.fsi` files (`Broker.App/AuditAdapterImpl`, `TimerAdapterImpl`, `LifecycleAdapterImpl`; `Broker.Protocol/CoordinatorAdapterImpl`, `ScriptingAdapterImpl`; `Broker.Viz/VizAdapterImpl`)",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T005"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T014",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 2,
+      "story": null,
+      "tier": null,
+      "parallel": false,
+      "title": "Exercise the drafted `.fsi` set from FSI via `scripts/prelude.fsx` against a pack of the new project; capture transcript to `readiness/transcripts/foundation-fsi-session.txt` (Constitution Principle I)",
+      "explicit_deps": [
+        "T006",
+        "T007",
+        "T008",
+        "T009",
+        "T010",
+        "T011",
+        "T012",
+        "T013"
+      ],
+      "phase_deps": [
+        "T005"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T015",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 2,
+      "story": null,
+      "tier": null,
+      "parallel": false,
+      "title": "Record initial surface-area baselines for the new `Broker.Mvu.*` modules and the updated/reduced `Broker.Protocol.BrokerState`, `Broker.Tui.TickLoop`, `HighBarCoordinatorService`, `ScriptingClientService` modules (Principle II)",
+      "explicit_deps": [
+        "T006",
+        "T007",
+        "T008",
+        "T009",
+        "T010",
+        "T011",
+        "T012",
+        "T013"
+      ],
+      "phase_deps": [
+        "T005"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T016",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 2,
+      "story": null,
+      "tier": null,
+      "parallel": true,
+      "title": "Document the Cmd-failure routing strategy + per-effect-family failure arms + `MailboxHighWater` rate-limit cooldown to `readiness/diagnostics-plan.md` (FR-008, spec Clarification Q3, Principle VI)",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T005"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T017",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 2,
+      "story": null,
+      "tier": null,
+      "parallel": false,
+      "title": "Document the `Hub` retirement scope: enumerate every removed surface (`Hub` type, `stateLock`, `openHostSession`, `openGuestSession`, `closeSession`, `attachCoordinator`, `coordinatorCommandChannel`, `mode`, `roster`, `slots`, `session`, `attachProxy`, `proxyOutbound`, `withLock`) with the greppable assertion text for SC-008 to `readiness/hub-retirement-plan.md`",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T005"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T018",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": true,
+      "title": "Implement `Broker.Mvu.Testing.Fixtures` (synthetic Model + Msg-stream builders for the four carve-out scenarios). Marked `[S]` per Principle IV \u2014 synthetic by definition; banner comment in source per data-model \u00a76.1",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T017"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T019",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": true,
+      "title": "Add `tests/Broker.Mvu.Tests/UpdateTests.fs` covering FR-001..FR-008 \u2014 pure update behaviour, exhaustive Msg matching, single-thread invariant, per-effect-family failure routing",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T017"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T020",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": true,
+      "title": "Add `tests/Broker.Mvu.Tests/ViewTests.fs` covering FR-009..FR-011 + FR-016 \u2014 `view` purity, `renderToString` determinism, byte-for-byte parity with post-002 dashboard for a fixed `Model` (SC-006)",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T017"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T021",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": true,
+      "title": "Add `tests/Broker.Mvu.Tests/RuntimeTests.fs` covering the test-runtime contract (FR-015, FR-017): synchronous dispatch, captured Cmd list shape, `completeCmd`/`failCmd`/`runUntilQuiescent` semantics",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T017"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T022",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": true,
+      "title": "Add `tests/Broker.Mvu.Tests/CarveoutT029Tests.fs` \u2014 broker\u2013proxy transcript MVU-replay (acceptance scenario 1, spec \u00a7US1)",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T017"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T023",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": true,
+      "title": "Add `tests/Broker.Mvu.Tests/CarveoutT037Tests.fs` \u2014 host-mode admin walkthrough MVU-replay (acceptance scenario 2)",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T017"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T024",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": true,
+      "title": "Add `tests/Broker.Mvu.Tests/CarveoutT042Tests.fs` \u2014 4-client \u00d7 200-unit dashboard render across \u226525 frames (acceptance scenario 3)",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T017"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T025",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": true,
+      "title": "Add `tests/Broker.Mvu.Tests/CarveoutT046Tests.fs` \u2014 viz status line in both `vizEnabled=true` and `--no-viz` modes (acceptance scenario 4)",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T017"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T026",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": true,
+      "title": "Implement `Broker.Mvu/Model.fs` \u2014 the immutable record + `init` builder (data-model \u00a71.1, \u00a71.2\u2013\u00a71.6)",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T017"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T027",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": true,
+      "title": "Implement `Broker.Mvu/Msg.fs` \u2014 the discriminated union covering every input (data-model \u00a71.7)",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T017"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T028",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": true,
+      "title": "Implement `Broker.Mvu/Cmd.fs` \u2014 DU + `batch`/`none` helpers (data-model \u00a71.8)",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T017"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T029",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": false,
+      "title": "Implement `Broker.Mvu/Update.fs` \u2014 exhaustive Msg match producing `Model * Cmd list`; FR-001..FR-008 + spec edge cases (cmd-failure routing, mailbox high-water cooldown, view-error rendering as data)",
+      "explicit_deps": [
+        "T019",
+        "T026",
+        "T027",
+        "T028"
+      ],
+      "phase_deps": [
+        "T017"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T030",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": false,
+      "title": "Implement `Broker.Mvu/View.fs` \u2014 `view : Model -> IRenderable` + `renderToString`; preserves post-002 dashboard byte-for-byte (FR-009, FR-010, FR-011, SC-006)",
+      "explicit_deps": [
+        "T020",
+        "T026"
+      ],
+      "phase_deps": [
+        "T017"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T031",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": false,
+      "title": "Implement `Broker.Mvu/TestRuntime.fs` \u2014 synchronous `dispatch`/`dispatchAll`/`completeCmd`/`failCmd`/`runUntilQuiescent` (FR-015, FR-017)",
+      "explicit_deps": [
+        "T021",
+        "T029"
+      ],
+      "phase_deps": [
+        "T017"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T032",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": false,
+      "title": "Regenerate readiness artefacts under `specs/001-tui-grpc-broker/readiness/` for T029/T037/T042/T046 \u2014 MVU-replay evidence captured, `Synthetic-Evidence Inventory` entries flipped to \"closed; live evidence captured by MVU replay\" (FR-021)",
+      "explicit_deps": [
+        "T018",
+        "T022",
+        "T023",
+        "T024",
+        "T025",
+        "T031"
+      ],
+      "phase_deps": [
+        "T017"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T033",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 4,
+      "story": "US3",
+      "tier": null,
+      "parallel": true,
+      "title": "Add `tests/Broker.Mvu.Tests/HubRetirementGuardTests.fs` \u2014 ripgrep-based assertion that `Hub.session <-`, `Hub.mode <-`, `withLock`, and equivalent direct mutations have zero hits outside historical specs/comments (SC-008)",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T032"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T034",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 4,
+      "story": "US3",
+      "tier": null,
+      "parallel": true,
+      "title": "Add `tests/Broker.Protocol.Tests` cases driving `HighBarCoordinatorService.Impl` and `ScriptingClientService.Impl` through `MvuRuntime.Host` to assert that inbound RPCs translate into the expected `Msg` dispatch and the response is read back from the resulting `Model` (FR-013)",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T032"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T035",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 4,
+      "story": "US3",
+      "tier": null,
+      "parallel": true,
+      "title": "Implement `Broker.Mvu/MvuRuntime.fs` \u2014 `Host`, MailboxProcessor<Msg> dispatcher, custom Elmish `setState` hook, `AdapterSet`, `Channel<Model>` broadcast for the render thread, mailbox high-water sampling + rate-limited audit (research \u00a72/\u00a73)",
+      "explicit_deps": [
+        "T029",
+        "T030"
+      ],
+      "phase_deps": [
+        "T032"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T036",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 4,
+      "story": "US3",
+      "tier": null,
+      "parallel": true,
+      "title": "Implement `Broker.App/AuditAdapterImpl.fs` (Serilog) \u2014 production audit sink emitting the existing envelope plus the three new arms (`MailboxHighWater`, `RuntimeStarted`, `RuntimeStopped` \u2014 data-model \u00a73.4)",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T032"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T037",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 4,
+      "story": "US3",
+      "tier": null,
+      "parallel": true,
+      "title": "Implement `Broker.App/TimerAdapterImpl.fs` \u2014 `System.Threading.Timer` per registered tick, posting `Msg.AdapterCallback.TimerFired` back through the runtime",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T032"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T038",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 4,
+      "story": "US3",
+      "tier": null,
+      "parallel": true,
+      "title": "Implement `Broker.App/LifecycleAdapterImpl.fs` \u2014 process exit + `SessionEnd` broadcast (graceful-shutdown path, research \u00a78)",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T032"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T039",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 4,
+      "story": "US3",
+      "tier": null,
+      "parallel": true,
+      "title": "Implement `Broker.Protocol/CoordinatorAdapterImpl.fs` \u2014 drains the runtime-emitted outbound `Channel<Command>` and writes to the active `OpenCommandChannel` server-stream",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T032"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T040",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 4,
+      "story": "US3",
+      "tier": null,
+      "parallel": true,
+      "title": "Implement `Broker.Protocol/ScriptingAdapterImpl.fs` \u2014 owns per-client `Channel<StateMsg>`; enforces FR-010 bounded backpressure; samples depth + high-water on `queueDepthSampleMs` cadence and posts `Msg.AdapterCallback.QueueDepth`/`QueueOverflow` back (spec Clarification Q1, FR-005)",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T032"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T041",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 4,
+      "story": "US3",
+      "tier": null,
+      "parallel": true,
+      "title": "Implement `Broker.Viz/VizAdapterImpl.fs` \u2014 drains a per-adapter `VizOp` channel into the dedicated SkiaViewer task; updates `VizControllerImpl` to match the new interface",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T032"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T042",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 4,
+      "story": "US3",
+      "tier": null,
+      "parallel": false,
+      "title": "Implement reduced `Broker.Protocol/BrokerState.fs` \u2014 `Binding`, `bind`, `postMsg`, `awaitResponse<'r>`, `init`; the new Msg-translation surface used by gRPC handlers",
+      "explicit_deps": [
+        "T035"
+      ],
+      "phase_deps": [
+        "T032"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T043",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 4,
+      "story": "US3",
+      "tier": null,
+      "parallel": false,
+      "title": "Refactor `Broker.Protocol/HighBarCoordinatorService.fs` `Impl` handlers to dispatch `Msg.CoordinatorInbound` arms via `Binding.awaitResponse` and read responses from the resulting `Model` (FR-013); zero direct state mutation",
+      "explicit_deps": [
+        "T034",
+        "T042"
+      ],
+      "phase_deps": [
+        "T032"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T044",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 4,
+      "story": "US3",
+      "tier": null,
+      "parallel": false,
+      "title": "Refactor `Broker.Protocol/ScriptingClientService.fs` `Impl` handlers to dispatch `Msg.ScriptingInbound` arms via `Binding.awaitResponse` (FR-013)",
+      "explicit_deps": [
+        "T034",
+        "T042"
+      ],
+      "phase_deps": [
+        "T032"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T045",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 4,
+      "story": "US3",
+      "tier": null,
+      "parallel": false,
+      "title": "Update `Broker.Tui/DashboardView.fs` and `Broker.Tui/LobbyView.fs` to accept Model fragments (replacing the previous `DiagnosticReading`/`Hub` projections); composed by `Broker.Mvu.View`",
+      "explicit_deps": [
+        "T026"
+      ],
+      "phase_deps": [
+        "T032"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T046",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 4,
+      "story": "US3",
+      "tier": null,
+      "parallel": false,
+      "title": "Reduce `Broker.Tui/TickLoop.fs` to the keypress-poll-and-render shell: poll `Console.KeyAvailable`, post `Msg.TuiInput.Keypress`, drain `MvuRuntime.subscribeModel` on each tick, feed `Broker.Mvu.View.view` into `LiveDisplay.Update`. Remove the previous `dispatch` table, `UiMode`, and `CoreFacade` consumer pattern",
+      "explicit_deps": [
+        "T035",
+        "T045"
+      ],
+      "phase_deps": [
+        "T032"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T047",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 4,
+      "story": "US3",
+      "tier": null,
+      "parallel": false,
+      "title": "Update `Broker.App/Program.fs` composition root: build initial `Model` from CLI args, register the six production adapters into `AdapterSet`, start `MvuRuntime.Host`, bind the gRPC services through `BrokerState.bind`, run `Broker.Tui.TickLoop`. Remove the `withLock` / `Hub.stateLock` plumbing in the same change",
+      "explicit_deps": [
+        "T035",
+        "T036",
+        "T037",
+        "T038",
+        "T039",
+        "T040",
+        "T041",
+        "T042",
+        "T043",
+        "T044",
+        "T046"
+      ],
+      "phase_deps": [
+        "T032"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T048",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 4,
+      "story": "US3",
+      "tier": null,
+      "parallel": false,
+      "title": "Delete `BrokerState.Hub` + `stateLock` and every removed mutation function listed in `readiness/hub-retirement-plan.md` (T017). Confirm SC-008 greppable check is green",
+      "explicit_deps": [
+        "T033",
+        "T043",
+        "T044",
+        "T047"
+      ],
+      "phase_deps": [
+        "T032"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T049",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 4,
+      "story": "US3",
+      "tier": null,
+      "parallel": false,
+      "title": "Update `Broker.Protocol.Tests` to bind through `MvuRuntime.Host` instead of `Hub`; the existing wire-shape coverage is preserved against the new surface",
+      "explicit_deps": [
+        "T042",
+        "T043",
+        "T044"
+      ],
+      "phase_deps": [
+        "T032"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T050",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 4,
+      "story": "US3",
+      "tier": null,
+      "parallel": false,
+      "title": "Update `Broker.Tui.Tests` for the reduced `TickLoop` and the off-screen render path against `Broker.Tui.View` composition",
+      "explicit_deps": [
+        "T046"
+      ],
+      "phase_deps": [
+        "T032"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T051",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 4,
+      "story": "US3",
+      "tier": null,
+      "parallel": false,
+      "title": "Verify `Broker.Integration.Tests` (`SyntheticCoordinator`, `CoordinatorLoadTests`, `ScriptingClientFanoutTests`) green against the production runtime \u2014 real adapters, real gRPC, real audit sink, real Spectre live render (US3 acceptance scenario 3, FR-018)",
+      "explicit_deps": [
+        "T047",
+        "T048"
+      ],
+      "phase_deps": [
+        "T032"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T052",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 5,
+      "story": "US2",
+      "tier": null,
+      "parallel": false,
+      "title": "Add a worked-example test that drives a new hotkey or column from `Msg` case \u2192 `update` clause \u2192 `View` render assert in fewer than 100 lines (SC-005 measurement)",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T051"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T053",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 5,
+      "story": "US2",
+      "tier": null,
+      "parallel": false,
+      "title": "Implement the worked-example feature (e.g., \"kick scripting client\" hotkey or per-team kill/loss column \u2014 pick one open backlog item) as the actual `Msg` case + `update` clause + `View` change + audit Cmd",
+      "explicit_deps": [
+        "T052"
+      ],
+      "phase_deps": [
+        "T051"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T054",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 5,
+      "story": "US2",
+      "tier": null,
+      "parallel": false,
+      "title": "Update `quickstart.md` Story 2 with the maintainer workflow walkthrough citing the worked example as canonical reference",
+      "explicit_deps": [
+        "T053"
+      ],
+      "phase_deps": [
+        "T051"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T055",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 6,
+      "story": "US4",
+      "tier": null,
+      "parallel": false,
+      "title": "Add tests in `tests/Broker.Mvu.Tests/CmdInspectionTests.fs` asserting `Cmd` list shape for representative flows: admin elevation \u2192 audit; admin command \u2192 coordinator outbound + audit; schema mismatch \u2192 audit + scripting reject \u2014 using `TestRuntime` + `Fixtures` with no live audit file and no live gRPC frame on the wire (US4 acceptance scenarios)",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T054"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T056",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 7,
+      "story": "US5",
+      "tier": null,
+      "parallel": true,
+      "title": "Check in render fixtures `tests/Broker.Mvu.Tests/Fixtures/dashboard-guest-2clients.txt`, `dashboard-host-elevated.txt`, `viz-active-footer.txt` (data-model \u00a76.1, plan \u00a7Testing)",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T055"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T057",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 7,
+      "story": "US5",
+      "tier": null,
+      "parallel": false,
+      "title": "Add `FixtureRegressionTests.fs` reading the checked-in `.txt` files and asserting `View.renderToString` equality; document the fixture-update workflow in `quickstart.md` Story 5",
+      "explicit_deps": [
+        "T056"
+      ],
+      "phase_deps": [
+        "T055"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T058",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 8,
+      "story": null,
+      "tier": null,
+      "parallel": false,
+      "title": "Surface-area baselines refresh \u2014 regenerate baselines for new + updated public modules; delete the retired `Broker.Protocol.BrokerState.surface.txt` Hub-era baseline; commit refreshed `.txt` files (Tier 1 obligation)",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T057"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T059",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 8,
+      "story": null,
+      "tier": null,
+      "parallel": false,
+      "title": "Run the packed `Broker.Mvu` library through `scripts/prelude.fsx` and any numbered example scripts under `scripts/examples/`; capture session to `readiness/transcripts/integration-fsi-session.txt` (Constitution Principle I, US1 independent test confirmation)",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T057"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T060",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 8,
+      "story": null,
+      "tier": null,
+      "parallel": false,
+      "title": "Run `speckit.graph.compute` (or `.specify/extensions/evidence/scripts/bash/run-audit.sh --graph-only`) \u2014 confirm no cycles, no dangling refs, no `[S*]` surprises",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T057"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T061",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 8,
+      "story": null,
+      "tier": null,
+      "parallel": false,
+      "title": "Run `speckit.evidence.audit` \u2014 confirm verdict PASS or document every `--accept-synthetic` override against `readiness/feature-tier.md`",
+      "explicit_deps": [
+        "T060"
+      ],
+      "phase_deps": [
+        "T057"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T062",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 8,
+      "story": null,
+      "tier": null,
+      "parallel": false,
+      "title": "Finalise PR description: enumerate `[S]` tasks, link the disclosure plan in `data-model.md \u00a76`, reference the SC-001..SC-008 evidence locations, refresh the Synthetic-Evidence Inventory below",
+      "explicit_deps": [
+        "T061"
+      ],
+      "phase_deps": [
+        "T057"
+      ],
+      "root_cause": []
+    }
+  ]
+}

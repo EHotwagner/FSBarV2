@@ -1,0 +1,8 @@
+  F Broker.App.Cli.Args.listen : String
+  F Broker.App.Cli.Args.noViz : Boolean
+  F Broker.App.Cli.Args.showVersion : Boolean
+M Broker.App.Cli.get_defaults() : Args
+M Broker.App.Cli.parse(argv:String[]) : FSharpResult<Args,String>
+M Broker.App.Cli.usage() : String
+P Broker.App.Cli.defaults : Args
+T Broker.App.Cli.Args : record

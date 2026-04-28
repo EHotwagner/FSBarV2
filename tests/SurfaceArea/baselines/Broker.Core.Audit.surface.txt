@@ -1,0 +1,13 @@
+  C Broker.Core.Audit.AuditEvent.AdminGranted(at:DateTimeOffset, id:ScriptingClientId, by:String)
+  C Broker.Core.Audit.AuditEvent.AdminRevoked(at:DateTimeOffset, id:ScriptingClientId, by:String)
+  C Broker.Core.Audit.AuditEvent.ClientConnected(at:DateTimeOffset, id:ScriptingClientId, version:Version)
+  C Broker.Core.Audit.AuditEvent.ClientDisconnected(at:DateTimeOffset, id:ScriptingClientId, reason:String)
+  C Broker.Core.Audit.AuditEvent.CommandRejected(at:DateTimeOffset, id:ScriptingClientId, commandId:Guid, reason:RejectReason)
+  C Broker.Core.Audit.AuditEvent.ModeChanged(at:DateTimeOffset, from':Mode, to':Mode)
+  C Broker.Core.Audit.AuditEvent.NameInUseRejected(at:DateTimeOffset, attempted:String)
+  C Broker.Core.Audit.AuditEvent.ProxyAttached(at:DateTimeOffset, version:Version)
+  C Broker.Core.Audit.AuditEvent.ProxyDetached(at:DateTimeOffset, reason:String)
+  C Broker.Core.Audit.AuditEvent.SessionEnded(at:DateTimeOffset, sessionId:Guid, reason:EndReason)
+  C Broker.Core.Audit.AuditEvent.VersionMismatchRejected(at:DateTimeOffset, peerKind:String, peerVersion:Version)
+M Broker.Core.Audit.toLogTemplate(event:AuditEvent) : ValueTuple<String,Tuple`2[]>
+T Broker.Core.Audit.AuditEvent : union

@@ -1,0 +1,7 @@
+  A Broker.App.GameProcess.Handle.OnExited(:FSharpFunc<Int32,Unit>) : Void
+  A Broker.App.GameProcess.Handle.get_ExitCode() : FSharpOption<Int32>
+  A Broker.App.GameProcess.Handle.get_HasExited() : Boolean
+  A Broker.App.GameProcess.Handle.get_Pid() : Int32
+M Broker.App.GameProcess.argsFor(baseArgs:FSharpList<String>, display:Display) : FSharpList<String>
+M Broker.App.GameProcess.start(exe:String, args:FSharpList<String>) : FSharpResult<Handle,String>
+T Broker.App.GameProcess.Handle : interface

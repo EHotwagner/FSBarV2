@@ -1,0 +1,6 @@
+  C Broker.Core.Mode.Mode.Guest()
+  C Broker.Core.Mode.Mode.Hosting(Item:LobbyConfig)
+  C Broker.Core.Mode.Mode.Idle()
+M Broker.Core.Mode.isAdminAuthorised(mode:Mode) : Boolean
+M Broker.Core.Mode.transition(current:Mode, next:Mode) : FSharpResult<Mode,String>
+T Broker.Core.Mode.Mode : union

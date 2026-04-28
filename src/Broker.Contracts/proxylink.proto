@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+// ProxyLink — gRPC service the in-game proxy AI connects to.
+// One in-process bidi pipe per session. The proxy AI is a *client* of
+// this service; the broker is the server (FR-005).
+
+package fsbar.broker.v1;
+
+option csharp_namespace = "FSBarV2.Broker.Contracts";
+
+import "common.proto";
+
+service ProxyLink {
+
+  // Single-connection lifetime: the proxy opens this stream once at
+  // session attach and keeps it open until disconnect.
+  //
+  // Protocol:
+  //   1. Proxy first message MUST be `Handshake`. Broker first reply MUST
+  //      be `HandshakeAck` or a stream-close with `Reject`.
+  //   2. Thereafter, proxy sends `GameStateSnapshot` messages on its
+  //      stream; broker sends queued `Command` messages on its stream.
+  //   3. Either side may close. Broker close after first snapshot stream
+  //      empty for keepAliveMissed * keepAliveIntervalMs is treated as
+  //      `disconnected:timeout`.
+  rpc Attach(stream ProxyClientMsg) returns (stream ProxyServerMsg);
+}
+
+message Handshake {
+  ProtocolVersion proxy_version = 1;
+  string proxy_id = 2;       // Informational — for audit log only.
+}
+
+message HandshakeAck {
+  ProtocolVersion broker_version = 1;
+  bytes session_id = 2;
+  // Server-side keepalive expectation.
+  uint32 keepalive_interval_ms = 3;
+}
+
+// Client → server multiplexed envelope.
+message ProxyClientMsg {
+  oneof body {
+    Handshake handshake = 1;
+    GameStateSnapshot snapshot = 2;
+    KeepAlivePing ping = 3;
+    SessionEnd session_end = 4;        // Game ended naturally (proxy reports).
+  }
+}
+
+// Server → client multiplexed envelope.
+message ProxyServerMsg {
+  oneof body {
+    HandshakeAck handshake_ack = 1;
+    Command command = 2;
+    KeepAlivePong pong = 3;
+    Reject reject = 4;                 // Used for VERSION_MISMATCH and shutdown notice.
+  }
+}
+
+message KeepAlivePing { int64 sent_at_unix_ms = 1; }
+message KeepAlivePong { int64 echo_at_unix_ms = 1; }

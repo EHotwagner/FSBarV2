@@ -1,0 +1,8 @@
+M Broker.Protocol.WireConvert.fromCoreCommand(command:Command) : Command
+M Broker.Protocol.WireConvert.fromCoreSnapshot(snapshot:GameStateSnapshot) : GameStateSnapshot
+M Broker.Protocol.WireConvert.fromCoreVersion(version:Version) : ProtocolVersion
+M Broker.Protocol.WireConvert.toCoreCommand(msg:Command) : Command
+M Broker.Protocol.WireConvert.toCoreSnapshot(msg:GameStateSnapshot) : GameStateSnapshot
+M Broker.Protocol.WireConvert.toCoreVersion(msg:ProtocolVersion) : Version
+M Broker.Protocol.WireConvert.toCoreVersionOpt(msg:FSharpValueOption<ProtocolVersion>) : Version
+M Broker.Protocol.WireConvert.toReject(reason:RejectReason, commandId:FSharpOption<Guid>, brokerVersion:FSharpOption<Version>) : Reject

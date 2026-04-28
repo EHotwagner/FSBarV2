@@ -1,0 +1,25 @@
+prelude: Broker.Core loaded.
+  Try:   Mode.transition Mode.Mode.Idle Mode.Mode.Guest
+  Try:   ScriptingRoster.empty
+  Note:  Phase-2 stubs throw 'not implemented'; that is expected.
+
+=== Broker.Core public-surface exercise ===
+
+1) Public values exposed via .fsi:
+   ScriptingRoster.empty -> abstract Roster (opaque type)
+   type: Broker.Core.ScriptingRoster+Roster
+
+2) ParticipantSlot — record literal across the .fsi boundary:
+   slot=0 team=1 bound=Some (ScriptingClientId "alice-bot")
+
+3) Snapshot.GameStateSnapshot — record literal works through .fsi:
+   snapshot tick=0 captured=04/27/2026 15:56:58 +00:00
+
+4) Mode union constructors are public:
+   Idle
+   Guest
+
+5) Phase-2 stubs throw 'not implemented' as expected:
+   caught (expected): not implemented
+
+OK — Broker.Core public surface loaded and exercised from FSI.

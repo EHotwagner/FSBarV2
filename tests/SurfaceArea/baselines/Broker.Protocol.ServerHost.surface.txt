@@ -1,0 +1,11 @@
+  A Broker.Protocol.ServerHost.ServerHandle.get_Hub() : Hub
+  A Broker.Protocol.ServerHost.ServerHandle.get_IsRunning() : Boolean
+  A Broker.Protocol.ServerHost.ServerHandle.get_Listening() : String
+  F Broker.Protocol.ServerHost.Options.commandQueueCapacity : Int32
+  F Broker.Protocol.ServerHost.Options.keepaliveIntervalMs : Int32
+  F Broker.Protocol.ServerHost.Options.listenAddress : String
+M Broker.Protocol.ServerHost.get_defaultOptions() : Options
+M Broker.Protocol.ServerHost.start(options:Options, brokerVersion:Version, auditEmitter:FSharpFunc<AuditEvent,Unit>, cancellationToken:CancellationToken) : Task<ServerHandle>
+P Broker.Protocol.ServerHost.defaultOptions : Options
+T Broker.Protocol.ServerHost.Options : record
+T Broker.Protocol.ServerHost.ServerHandle : interface

@@ -1,0 +1,2 @@
+M Broker.Tui.DashboardView.render(reading:DiagnosticReading) : Layout
+M Broker.Tui.DashboardView.renderWithViz(reading:DiagnosticReading, vizStatus:FSharpOption<String>) : Layout

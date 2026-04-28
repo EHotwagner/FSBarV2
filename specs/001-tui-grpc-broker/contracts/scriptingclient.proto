@@ -1,0 +1,93 @@
+syntax = "proto3";
+
+// ScriptingClient — gRPC service external bots / automation tools connect
+// to. Multiple clients may be connected at once; each holds at most one
+// `SubscribeState` stream and at most one `SubmitCommands` stream.
+
+package fsbar.broker.v1;
+
+option csharp_namespace = "FSBarV2.Broker.Contracts";
+
+import "common.proto";
+
+service ScriptingClient {
+
+  // Handshake establishes identity + version. Returns a stream-ack only
+  // (no continuous data). Subsequent stream RPCs reuse `client_name`
+  // for routing and authority.
+  //
+  // Errors:
+  //   NAME_IN_USE       — another live client holds this name (FR-008).
+  //   VERSION_MISMATCH  — major-version skew with broker (FR-029).
+  rpc Hello(HelloRequest) returns (HelloReply);
+
+  // Subscribe to live game state. Server-streaming.
+  //
+  // Delivery contract (FR-006):
+  //   - First message is always a current full `GameStateSnapshot`.
+  //   - Subsequent messages are continuous incremental snapshots in
+  //     strictly increasing tick order — no gaps.
+  //   - On session end, server sends `SessionEnd` and closes the stream.
+  rpc SubscribeState(SubscribeRequest) returns (stream StateMsg);
+
+  // Bind / unbind a participant slot for gameplay-command authority.
+  // Single-writer rule (FR-009): rejected with SLOT_NOT_OWNED if another
+  // client currently holds the slot.
+  rpc BindSlot(BindSlotRequest) returns (BindSlotReply);
+  rpc UnbindSlot(UnbindSlotRequest) returns (UnbindSlotReply);
+
+  // Submit commands. Bidi-streaming, one stream per client.
+  //
+  // Backpressure (FR-010):
+  //   - Per-client bounded queue.
+  //   - When full, broker pauses reads via HTTP/2 flow control.
+  //   - Any command that nevertheless arrives is rejected synchronously
+  //     with `Reject(QUEUE_FULL)` carrying the offending command_id.
+  //   - Commands are NEVER silently dropped, evicted, or reordered.
+  rpc SubmitCommands(stream Command) returns (stream CommandAck);
+}
+
+message HelloRequest {
+  string client_name = 1;             // Non-empty; canonical id (FR-008).
+  ProtocolVersion client_version = 2;
+}
+
+message HelloReply {
+  ProtocolVersion broker_version = 1;
+  bytes session_id = 2;               // Empty if broker is currently Idle.
+  // Whether this client was admitted as admin. Always false on first
+  // connection — admin is granted later via operator action (FR-016).
+  bool is_admin = 3;
+}
+
+message SubscribeRequest {
+  string client_name = 1;
+}
+
+message StateMsg {
+  oneof body {
+    GameStateSnapshot snapshot = 1;
+    SessionEnd session_end = 2;
+  }
+}
+
+message BindSlotRequest {
+  string client_name = 1;
+  int32 slot_index = 2;
+}
+message BindSlotReply {
+  bool ok = 1;
+  Reject reject = 2;                  // Set when ok = false.
+}
+
+message UnbindSlotRequest {
+  string client_name = 1;
+  int32 slot_index = 2;
+}
+message UnbindSlotReply { bool ok = 1; }
+
+message CommandAck {
+  bytes command_id = 1;
+  bool accepted = 2;
+  Reject reject = 3;                  // Set when accepted = false.
+}

@@ -1,0 +1,15 @@
+  C Broker.Core.Dashboard.ServerState.Down(reason:String)
+  C Broker.Core.Dashboard.ServerState.Listening(address:String)
+  F Broker.Core.Dashboard.DiagnosticReading.broker : BrokerInfo
+  F Broker.Core.Dashboard.DiagnosticReading.connectedClients : FSharpList<ScriptingClient>
+  F Broker.Core.Dashboard.DiagnosticReading.elapsed : FSharpOption<TimeSpan>
+  F Broker.Core.Dashboard.DiagnosticReading.mode : Mode
+  F Broker.Core.Dashboard.DiagnosticReading.pause : FSharpOption<Pause>
+  F Broker.Core.Dashboard.DiagnosticReading.serverState : ServerState
+  F Broker.Core.Dashboard.DiagnosticReading.session : FSharpOption<SessionState>
+  F Broker.Core.Dashboard.DiagnosticReading.speed : FSharpOption<Decimal>
+  F Broker.Core.Dashboard.DiagnosticReading.telemetry : FSharpOption<GameStateSnapshot>
+  F Broker.Core.Dashboard.DiagnosticReading.telemetryStale : Boolean
+M Broker.Core.Dashboard.build(broker:BrokerInfo, serverState:ServerState, roster:Roster, session:FSharpOption<Session>, now:DateTimeOffset, staleThreshold:TimeSpan) : DiagnosticReading
+T Broker.Core.Dashboard.DiagnosticReading : record
+T Broker.Core.Dashboard.ServerState : union

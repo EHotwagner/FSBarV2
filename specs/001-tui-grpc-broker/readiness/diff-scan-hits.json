@@ -1,0 +1,62 @@
+{
+  "base_ref": null,
+  "blocking": [
+    {
+      "file": ".specify/memory/constitution.md",
+      "line": 90,
+      "pattern": "not-implemented",
+      "severity": "block",
+      "reason": "Placeholder exception in production code",
+      "match": "substitutes, `NotImplementedException` placeholders, `failwith \"TODO\"`,"
+    },
+    {
+      "file": ".specify/memory/constitution.md",
+      "line": 139,
+      "pattern": "skipped-tests",
+      "severity": "block",
+      "reason": "Skipped or ignored test",
+      "match": "`[<Skip>]` attribute, or the test framework's skip mechanism) with written"
+    },
+    {
+      "file": "scripts/prelude.fsx",
+      "line": 17,
+      "pattern": "not-implemented",
+      "severity": "block",
+      "reason": "Placeholder exception in production code",
+      "match": "// return real results instead of throwing `failwith \"not implemented\"`."
+    },
+    {
+      "file": "specs/001-tui-grpc-broker/readiness/task-graph.md",
+      "line": 187,
+      "pattern": "not-implemented",
+      "severity": "block",
+      "reason": "Placeholder exception in production code",
+      "match": "T009 [X] Draft the `Broker.Core` public surface as `.fsi` files (`Mode.fsi`, `Lobby.fsi`, `ParticipantSlot.fsi`, `Script"
+    },
+    {
+      "file": "specs/001-tui-grpc-broker/tasks.md",
+      "line": 65,
+      "pattern": "not-implemented",
+      "severity": "block",
+      "reason": "Placeholder exception in production code",
+      "match": "- [X] T009 Draft the `Broker.Core` public surface as `.fsi` files (`Mode.fsi`, `Lobby.fsi`, `ParticipantSlot.fsi`, `Scri"
+    },
+    {
+      "file": "src/Broker.App/GameProcess.fs",
+      "line": 82,
+      "pattern": "skipped-tests",
+      "severity": "block",
+      "reason": "Skipped or ignored test",
+      "match": "proc.WaitForExit(2000) |> ignore"
+    },
+    {
+      "file": "tests/Broker.Core.Tests/CommandPipelineTests.fs",
+      "line": 186,
+      "pattern": "commented-assertions",
+      "severity": "block",
+      "reason": "Commented-out assertion",
+      "match": "// shouldn't, but Invariant 3 says we don't trust the flag)."
+    }
+  ],
+  "advisory": []
+}

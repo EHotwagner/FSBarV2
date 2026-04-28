@@ -1,0 +1,2 @@
+M Broker.App.Logging.configure(logDirectory:String) : ILoggerFactory
+M Broker.App.Logging.writeAudit(factory:ILoggerFactory, event:AuditEvent) : Void

@@ -1,0 +1,8 @@
+  F Broker.Protocol.BackpressureGate.CommandAck.accepted : Boolean
+  F Broker.Protocol.BackpressureGate.CommandAck.commandId : Guid
+  F Broker.Protocol.BackpressureGate.CommandAck.reject : FSharpOption<RejectReason>
+  F Broker.Protocol.BackpressureGate.Gate.queue : Queue
+M Broker.Protocol.BackpressureGate.create(queue:Queue) : Gate
+M Broker.Protocol.BackpressureGate.process_(gate:Gate, mode:Mode, roster:Roster, slots:FSharpList<ParticipantSlot>, command:Command) : CommandAck
+T Broker.Protocol.BackpressureGate.CommandAck : record
+T Broker.Protocol.BackpressureGate.Gate : record

@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <IsPackable>true</IsPackable>
+    <PackageId>Broker.Contracts</PackageId>
+    <Description>gRPC wire contracts (.proto) for the TUI gRPC Game Broker, with F# generated types.</Description>
+    <!-- Generated proto code (Grpc-FSharp.Tools 0.2.0) predates nullable F#; disable for generated assembly. -->
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- proxylink.proto and scriptingclient.proto import "common.proto"; ProtoRoot anchors that resolution. -->
+    <Protobuf Include="common.proto" GrpcServices="None" ProtoRoot="." />
+    <Protobuf Include="proxylink.proto" GrpcServices="Both" ProtoRoot="." />
+    <Protobuf Include="scriptingclient.proto" GrpcServices="Both" ProtoRoot="." />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.34.1" />
+    <PackageReference Include="Grpc-FSharp.Tools" Version="0.2.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Grpc.AspNetCore.Server" Version="2.76.0" />
+  </ItemGroup>
+
+</Project>

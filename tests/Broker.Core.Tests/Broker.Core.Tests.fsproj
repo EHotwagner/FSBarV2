@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <GenerateProgramFile>false</GenerateProgramFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="ScriptingRosterTests.fs" />
+    <Compile Include="ParticipantSlotTests.fs" />
+    <Compile Include="CommandPipelineTests.fs" />
+    <Compile Include="SnapshotTests.fs" />
+    <Compile Include="LobbyTests.fs" />
+    <Compile Include="DashboardTests.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Broker.Core\Broker.Core.fsproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Expecto" Version="10.2.2" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="YoloDev.Expecto.TestSdk" Version="0.15.3" />
+  </ItemGroup>
+
+</Project>

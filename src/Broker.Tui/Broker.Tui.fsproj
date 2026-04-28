@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <IsPackable>true</IsPackable>
+    <PackageId>Broker.Tui</PackageId>
+    <Description>Spectre.Console TUI dashboard, hotkey loop, and lobby views for the broker.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Layout.fsi" />
+    <Compile Include="Layout.fs" />
+    <Compile Include="HotkeyMap.fsi" />
+    <Compile Include="HotkeyMap.fs" />
+    <Compile Include="DashboardView.fsi" />
+    <Compile Include="DashboardView.fs" />
+    <Compile Include="LobbyView.fsi" />
+    <Compile Include="LobbyView.fs" />
+    <Compile Include="TickLoop.fsi" />
+    <Compile Include="TickLoop.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Broker.Core\Broker.Core.fsproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Spectre.Console" Version="0.55.2" />
+  </ItemGroup>
+
+</Project>

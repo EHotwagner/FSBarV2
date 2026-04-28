@@ -1,0 +1,13 @@
+  C Broker.Tui.HotkeyMap.Action.ElevateClient(Item:ScriptingClientId)
+  C Broker.Tui.HotkeyMap.Action.EndSession()
+  C Broker.Tui.HotkeyMap.Action.LaunchHostSession()
+  C Broker.Tui.HotkeyMap.Action.NoAction()
+  C Broker.Tui.HotkeyMap.Action.OpenElevatePrompt()
+  C Broker.Tui.HotkeyMap.Action.OpenLobby()
+  C Broker.Tui.HotkeyMap.Action.Quit()
+  C Broker.Tui.HotkeyMap.Action.RevokeClient(Item:ScriptingClientId)
+  C Broker.Tui.HotkeyMap.Action.StepSpeed(delta:Decimal)
+  C Broker.Tui.HotkeyMap.Action.TogglePause()
+  C Broker.Tui.HotkeyMap.Action.ToggleViz()
+M Broker.Tui.HotkeyMap.map(key:ConsoleKeyInfo, mode:Mode) : Action
+T Broker.Tui.HotkeyMap.Action : union

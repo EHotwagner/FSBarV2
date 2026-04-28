@@ -1,0 +1,15 @@
+  C Broker.Core.Lobby.Display.Graphical()
+  C Broker.Core.Lobby.Display.Headless()
+  C Broker.Core.Lobby.LobbyError.DuplicateSlotIndex(Item:Int32)
+  C Broker.Core.Lobby.LobbyError.EmptyGameMode()
+  C Broker.Core.Lobby.LobbyError.EmptyMapName()
+  C Broker.Core.Lobby.LobbyError.MissingProxySlotForBoundClient(clientName:String)
+  C Broker.Core.Lobby.LobbyError.TooManyParticipants(capacity:Int32, actual:Int32)
+  F Broker.Core.Lobby.LobbyConfig.display : Display
+  F Broker.Core.Lobby.LobbyConfig.gameMode : String
+  F Broker.Core.Lobby.LobbyConfig.mapName : String
+  F Broker.Core.Lobby.LobbyConfig.participants : FSharpList<ParticipantSlot>
+M Broker.Core.Lobby.validate(config:LobbyConfig, connectedClients:FSharpList<ScriptingClientId>) : FSharpResult<LobbyConfig,LobbyError>
+T Broker.Core.Lobby.Display : union
+T Broker.Core.Lobby.LobbyConfig : record
+T Broker.Core.Lobby.LobbyError : union

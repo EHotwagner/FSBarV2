@@ -1,0 +1,53 @@
+  C Broker.Core.CommandPipeline.AdminPayload.GrantResources(playerId:Int32, resources:ResourceVector)
+  C Broker.Core.CommandPipeline.AdminPayload.OverrideVictory(playerId:Int32, outcome:VictoryOverride)
+  C Broker.Core.CommandPipeline.AdminPayload.OverrideVision(playerId:Int32, mode:VisionMode)
+  C Broker.Core.CommandPipeline.AdminPayload.Pause()
+  C Broker.Core.CommandPipeline.AdminPayload.Resume()
+  C Broker.Core.CommandPipeline.AdminPayload.SetSpeed(multiplier:Decimal)
+  C Broker.Core.CommandPipeline.CommandKind.Admin(payload:AdminPayload)
+  C Broker.Core.CommandPipeline.CommandKind.Gameplay(payload:GameplayPayload)
+  C Broker.Core.CommandPipeline.EnqueueOutcome.Accepted()
+  C Broker.Core.CommandPipeline.EnqueueOutcome.Rejected(Item:RejectReason)
+  C Broker.Core.CommandPipeline.GameplayPayload.Build(builderId:UInt32, classId:String, pos:Vec2)
+  C Broker.Core.CommandPipeline.GameplayPayload.Custom(name:String, blob:Byte[])
+  C Broker.Core.CommandPipeline.GameplayPayload.UnitOrder(unitIds:FSharpList<UInt32>, order:OrderKind, targetPos:FSharpOption<Vec2>, targetUnitId:FSharpOption<UInt32>)
+  C Broker.Core.CommandPipeline.OrderKind.Attack()
+  C Broker.Core.CommandPipeline.OrderKind.Guard()
+  C Broker.Core.CommandPipeline.OrderKind.Move()
+  C Broker.Core.CommandPipeline.OrderKind.Patrol()
+  C Broker.Core.CommandPipeline.OrderKind.Stop()
+  C Broker.Core.CommandPipeline.RejectReason.AdminNotAvailable()
+  C Broker.Core.CommandPipeline.RejectReason.InvalidPayload(detail:String)
+  C Broker.Core.CommandPipeline.RejectReason.NameInUse()
+  C Broker.Core.CommandPipeline.RejectReason.QueueFull()
+  C Broker.Core.CommandPipeline.RejectReason.SlotNotOwned(slot:Int32, actualOwner:FSharpOption<ScriptingClientId>)
+  C Broker.Core.CommandPipeline.RejectReason.VersionMismatch(broker:Version, peer:Version)
+  C Broker.Core.CommandPipeline.VictoryOverride.ForceLose()
+  C Broker.Core.CommandPipeline.VictoryOverride.ForceWin()
+  C Broker.Core.CommandPipeline.VictoryOverride.Reset()
+  C Broker.Core.CommandPipeline.VisionMode.Blind()
+  C Broker.Core.CommandPipeline.VisionMode.Full()
+  C Broker.Core.CommandPipeline.VisionMode.Normal()
+  F Broker.Core.CommandPipeline.Command.commandId : Guid
+  F Broker.Core.CommandPipeline.Command.kind : CommandKind
+  F Broker.Core.CommandPipeline.Command.originatingClient : ScriptingClientId
+  F Broker.Core.CommandPipeline.Command.submittedAt : DateTimeOffset
+  F Broker.Core.CommandPipeline.Command.targetSlot : FSharpOption<Int32>
+  F Broker.Core.CommandPipeline.Queue.capacity : Int32
+  F Broker.Core.CommandPipeline.Queue.channel : Channel<Command>
+M Broker.Core.CommandPipeline.authorise(mode:Mode, roster:Roster, slots:FSharpList<ParticipantSlot>, command:Command) : FSharpResult<Unit,RejectReason>
+M Broker.Core.CommandPipeline.capacity(queue:Queue) : Int32
+M Broker.Core.CommandPipeline.createQueue(capacity:Int32) : Queue
+M Broker.Core.CommandPipeline.depth(queue:Queue) : Int32
+M Broker.Core.CommandPipeline.drain(max:Int32, queue:Queue) : FSharpList<Command>
+M Broker.Core.CommandPipeline.tryEnqueue(queue:Queue, command:Command) : EnqueueOutcome
+T Broker.Core.CommandPipeline.AdminPayload : union
+T Broker.Core.CommandPipeline.Command : record
+T Broker.Core.CommandPipeline.CommandKind : union
+T Broker.Core.CommandPipeline.EnqueueOutcome : union
+T Broker.Core.CommandPipeline.GameplayPayload : union
+T Broker.Core.CommandPipeline.OrderKind : union
+T Broker.Core.CommandPipeline.Queue : record
+T Broker.Core.CommandPipeline.RejectReason : union
+T Broker.Core.CommandPipeline.VictoryOverride : union
+T Broker.Core.CommandPipeline.VisionMode : union

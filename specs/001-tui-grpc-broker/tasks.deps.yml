@@ -1,0 +1,88 @@
+schema_version: "1.0"
+
+# Dependency topology for tasks.md.
+#
+# Every Tnnn id that appears in tasks.md MUST appear as a key here, even if
+# its deps list is empty. compute-task-graph.py refuses to proceed on
+# dangling references or orphaned tasks.
+#
+# Phase-checkpoint edges are auto-injected by the script (every task in
+# Phase N+1 implicitly depends on the last foundation task of Phase N).
+# Only write non-phase cross-edges here.
+#
+# Phase boundaries (last task per phase, the implicit checkpoint):
+#   Phase 1 Setup           → T006
+#   Phase 2 Foundation      → T015
+#   Phase 3 US1 (guest)     → T029b
+#   Phase 4 US2 (host)      → T037
+#   Phase 5 US3 (dashboard) → T042
+#   Phase 6 US4 (viz)       → T046
+#   Phase 7 Integration     → T050
+
+tasks:
+  # Phase 1 — Setup
+  T001: []
+  T002: []
+  T003: [T001]
+  T004: [T001]
+  T005: [T003, T004]
+  T006: []
+
+  # Phase 2 — Foundation
+  T007: []
+  T008: [T007]
+  T009: []
+  T010: [T008, T009]
+  T011: [T009]
+  T012: [T009, T010, T011]
+  T013: [T009]
+  T014: [T009, T010, T011, T012]
+  T015: []
+
+  # Phase 3 — US1 (guest-mode bridge)
+  T016: []
+  T017: []
+  T018: []
+  T019: []
+  T020: []
+  T021: []
+  T021a: []
+  T022: [T016, T017, T018]
+  T023: [T019, T020]
+  T024: [T022, T023]
+  T025: [T016, T024]
+  T026: [T021, T025]
+  T027: [T025]
+  T028: [T024, T026, T027]
+  T029: [T028]
+  T029a: [T029]
+  T029b: [T029]
+
+  # Phase 4 — US2 (host-mode + admin)
+  T030: []
+  T031: []
+  T032: []
+  T033: [T030, T024]
+  T034: [T033, T028]
+  T035: [T033]
+  T036: [T031, T026]
+  T037: [T034, T035, T036]
+
+  # Phase 5 — US3 (diagnostic dashboard)
+  T038: []
+  T039: []
+  T040: [T038, T024]
+  T041: [T039, T040, T028]
+  T042: [T041]
+
+  # Phase 6 — US4 (optional 2D viz)
+  T043: []
+  T044: [T043, T024]
+  T045: [T044, T028]
+  T046: [T045]
+
+  # Phase 7 — Integration & Polish
+  T047: [T014]
+  T048: [T013]
+  T049: []
+  T050: [T049]

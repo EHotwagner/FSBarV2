@@ -1,0 +1,6 @@
+  F Broker.Protocol.ScriptingClientService.Service.hub : Hub
+M Broker.Protocol.ScriptingClientService.broadcastSessionEnd(service:Service, reason:EndReason) : Void
+M Broker.Protocol.ScriptingClientService.connectedCount(service:Service) : Int32
+M Broker.Protocol.ScriptingClientService.create(hub:Hub) : Service
+T Broker.Protocol.ScriptingClientService.Impl : class
+T Broker.Protocol.ScriptingClientService.Service : record

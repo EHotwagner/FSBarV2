@@ -1,0 +1,43 @@
+  F Broker.Protocol.BrokerState.ClientChannel.id : ScriptingClientId
+  F Broker.Protocol.BrokerState.ClientChannel.queue : Queue
+  F Broker.Protocol.BrokerState.ClientChannel.subscriber : FSharpOption<Channel`1>
+  F Broker.Protocol.BrokerState.Hub.auditEmitter : FSharpFunc<AuditEvent,Unit>
+  F Broker.Protocol.BrokerState.Hub.brokerVersion : Version
+  F Broker.Protocol.BrokerState.Hub.clients : ConcurrentDictionary<ScriptingClientId,ClientChannel>
+  F Broker.Protocol.BrokerState.Hub.commandQueueCapacity : Int32
+  F Broker.Protocol.BrokerState.Hub.mode : Mode
+  F Broker.Protocol.BrokerState.Hub.proxyOutbound : FSharpOption<Channel`1>
+  F Broker.Protocol.BrokerState.Hub.roster : Roster
+  F Broker.Protocol.BrokerState.Hub.session : FSharpOption<Session>
+  F Broker.Protocol.BrokerState.Hub.slots : FSharpList<ParticipantSlot>
+  F Broker.Protocol.BrokerState.Hub.snapshotBroadcaster : SnapshotBroadcaster
+  F Broker.Protocol.BrokerState.Hub.stateLock : Object
+M Broker.Protocol.BrokerState.applySnapshot(snapshot:GameStateSnapshot, hub:Hub) : Void
+M Broker.Protocol.BrokerState.asCoreFacade(hub:Hub) : CoreFacade
+M Broker.Protocol.BrokerState.attachProxy(link:ProxyAiLink, hub:Hub) : FSharpResult<Unit,String>
+M Broker.Protocol.BrokerState.auditEmitter(hub:Hub) : FSharpFunc<AuditEvent,Unit>
+M Broker.Protocol.BrokerState.bindSlot(id:ScriptingClientId, slot:Int32, hub:Hub) : FSharpResult<Unit,SingleWriterError>
+M Broker.Protocol.BrokerState.brokerVersion(hub:Hub) : Version
+M Broker.Protocol.BrokerState.closeSession(reason:EndReason, at:DateTimeOffset, hub:Hub) : Void
+M Broker.Protocol.BrokerState.create(brokerVersion:Version, commandQueueCapacity:Int32, auditEmitter:FSharpFunc<AuditEvent,Unit>) : Hub
+M Broker.Protocol.BrokerState.grantAdmin(id:ScriptingClientId, by:String, at:DateTimeOffset, hub:Hub) : FSharpResult<Unit,RosterError>
+M Broker.Protocol.BrokerState.launchHostSession(at:DateTimeOffset, hub:Hub) : FSharpResult<Unit,String>
+M Broker.Protocol.BrokerState.liveClients(hub:Hub) : FSharpList<ClientChannel>
+M Broker.Protocol.BrokerState.mode(hub:Hub) : Mode
+M Broker.Protocol.BrokerState.openGuestSession(at:DateTimeOffset, hub:Hub) : FSharpResult<Unit,String>
+M Broker.Protocol.BrokerState.openHostSession(config:LobbyConfig, at:DateTimeOffset, hub:Hub) : FSharpResult<Unit,String>
+M Broker.Protocol.BrokerState.proxyOutbound(hub:Hub) : FSharpOption<Channel`1>
+M Broker.Protocol.BrokerState.registerClient(id:ScriptingClientId, peerVersion:Version, at:DateTimeOffset, hub:Hub) : FSharpResult<ClientChannel,RosterError>
+M Broker.Protocol.BrokerState.revokeAdmin(id:ScriptingClientId, by:String, at:DateTimeOffset, hub:Hub) : FSharpResult<Unit,RosterError>
+M Broker.Protocol.BrokerState.roster(hub:Hub) : Roster
+M Broker.Protocol.BrokerState.sendToProxy(command:Command, hub:Hub) : Void
+M Broker.Protocol.BrokerState.session(hub:Hub) : FSharpOption<Session>
+M Broker.Protocol.BrokerState.slots(hub:Hub) : FSharpList<ParticipantSlot>
+M Broker.Protocol.BrokerState.snapshots(hub:Hub) : IObservable<GameStateSnapshot>
+M Broker.Protocol.BrokerState.stepSpeed(delta:Decimal, hub:Hub) : FSharpResult<Unit,String>
+M Broker.Protocol.BrokerState.togglePause(hub:Hub) : FSharpResult<Unit,String>
+M Broker.Protocol.BrokerState.tryGetClient(id:ScriptingClientId, hub:Hub) : FSharpOption<ClientChannel>
+M Broker.Protocol.BrokerState.unbindSlot(id:ScriptingClientId, slot:Int32, hub:Hub) : Void
+M Broker.Protocol.BrokerState.unregisterClient(id:ScriptingClientId, reason:String, at:DateTimeOffset, hub:Hub) : Void
+T Broker.Protocol.BrokerState.ClientChannel : record
+T Broker.Protocol.BrokerState.Hub : record

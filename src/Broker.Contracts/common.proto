@@ -1,0 +1,206 @@
+syntax = "proto3";
+
+// Shared messages used by both ProxyLink and ScriptingClient services.
+// This file is the canonical wire contract for the TUI gRPC Game Broker.
+// Stable across minor versions; major-version bumps require a coordinated
+// peer rollout (see FR-029 in spec.md).
+
+package fsbar.broker.v1;
+
+option csharp_namespace = "FSBarV2.Broker.Contracts";
+
+// ----- Versioning ------------------------------------------------------
+
+message ProtocolVersion {
+  uint32 major = 1;  // Strict-match field on handshake.
+  uint32 minor = 2;  // Minor skew is tolerated; peers ignore unknown minor-
+                     // version-added fields.
+}
+
+// ----- Geometry / scalars ---------------------------------------------
+
+message Vec2 {
+  float x = 1;
+  float y = 2;
+}
+
+message ResourceVector {
+  // Generic per spec Assumptions; HighBarV3 maps these to its own units.
+  double metal = 1;
+  double energy = 2;
+  // Reserved 3..15 for additional resource axes added in future minor
+  // versions without breaking the major contract.
+}
+
+message EconomyStats {
+  ResourceVector income = 1;
+  ResourceVector expenditure = 2;
+}
+
+// ----- Game-state snapshot --------------------------------------------
+
+message MapMeta {
+  string map_name = 1;
+  Vec2 size = 2;        // World extent
+  bytes outline = 3;    // Optional terrain outline (engine-defined blob)
+}
+
+message PlayerTelemetry {
+  int32 player_id = 1;
+  int32 team_id = 2;
+  string name = 3;
+  ResourceVector resources = 4;
+  uint32 unit_count = 5;
+  uint32 building_count = 6;
+  map<string, uint32> unit_class_breakdown = 7;
+  EconomyStats economy = 8;
+  uint32 kills = 9;
+  uint32 losses = 10;
+}
+
+message Unit {
+  uint32 id = 1;
+  string class_id = 2;
+  int32 owner_player_id = 3;
+  Vec2 pos = 4;
+}
+
+message Building {
+  uint32 id = 1;
+  string class_id = 2;
+  int32 owner_player_id = 3;
+  Vec2 pos = 4;
+}
+
+message GameStateSnapshot {
+  // sessionId encoded as 16-byte UUID for cross-language safety.
+  bytes session_id = 1;
+  int64 tick = 2;                       // Strictly increasing per session.
+  int64 captured_at_unix_ms = 3;        // Broker-side receipt time.
+  repeated PlayerTelemetry players = 4;
+  repeated Unit units = 5;
+  repeated Building buildings = 6;
+  MapMeta map_meta = 7;                 // Present in first snapshot only.
+}
+
+// ----- Commands -------------------------------------------------------
+
+enum VisionMode {
+  VISION_MODE_UNSPECIFIED = 0;
+  VISION_MODE_NORMAL = 1;
+  VISION_MODE_FULL = 2;          // "see all"
+  VISION_MODE_BLIND = 3;
+}
+
+enum VictoryOverride {
+  VICTORY_OVERRIDE_UNSPECIFIED = 0;
+  VICTORY_OVERRIDE_FORCE_WIN = 1;
+  VICTORY_OVERRIDE_FORCE_LOSE = 2;
+  VICTORY_OVERRIDE_RESET = 3;
+}
+
+message UnitOrder {
+  enum OrderKind {
+    ORDER_KIND_UNSPECIFIED = 0;
+    ORDER_KIND_MOVE = 1;
+    ORDER_KIND_ATTACK = 2;
+    ORDER_KIND_STOP = 3;
+    ORDER_KIND_GUARD = 4;
+    ORDER_KIND_PATROL = 5;
+  }
+  repeated uint32 unit_ids = 1;
+  OrderKind kind = 2;
+  Vec2 target_pos = 3;          // Required for MOVE/ATTACK/PATROL.
+  uint32 target_unit_id = 4;    // Required for ATTACK/GUARD on a target.
+}
+
+message BuildOrder {
+  uint32 builder_id = 1;
+  string class_id = 2;
+  Vec2 pos = 3;
+}
+
+message GameplayPayload {
+  oneof body {
+    UnitOrder unit_order = 1;
+    BuildOrder build = 2;
+    CustomCommand custom = 15;       // Forward-compat escape hatch.
+  }
+}
+
+message CustomCommand {
+  string name = 1;
+  bytes blob = 2;
+}
+
+message AdminPayload {
+  oneof body {
+    SetSpeed set_speed = 1;
+    Pause pause = 2;
+    Resume resume = 3;
+    GrantResources grant_resources = 4;
+    OverrideVision override_vision = 5;
+    OverrideVictoryMessage override_victory = 6;
+  }
+}
+
+message SetSpeed { double multiplier = 1; }
+message Pause {}
+message Resume {}
+message GrantResources {
+  int32 player_id = 1;
+  ResourceVector resources = 2;
+}
+message OverrideVision {
+  int32 player_id = 1;
+  VisionMode mode = 2;
+}
+message OverrideVictoryMessage {
+  int32 player_id = 1;
+  VictoryOverride outcome = 2;
+}
+
+message Command {
+  bytes command_id = 1;            // Client-generated UUID; echoed in errors.
+  string originating_client = 2;   // Same string asserted on Handshake.
+  int32 target_slot = 3;           // Required for gameplay; ignored for admin.
+  oneof kind {
+    GameplayPayload gameplay = 4;
+    AdminPayload admin = 5;
+  }
+  int64 submitted_at_unix_ms = 6;
+}
+
+// ----- Reject reasons -------------------------------------------------
+
+message Reject {
+  enum Code {
+    CODE_UNSPECIFIED = 0;
+    CODE_QUEUE_FULL = 1;
+    CODE_ADMIN_NOT_AVAILABLE = 2;
+    CODE_SLOT_NOT_OWNED = 3;
+    CODE_NAME_IN_USE = 4;
+    CODE_VERSION_MISMATCH = 5;
+    CODE_INVALID_PAYLOAD = 6;
+  }
+  Code code = 1;
+  bytes command_id = 2;          // The rejected command (for QUEUE_FULL etc.).
+  string detail = 3;             // Human-readable amplification.
+  ProtocolVersion broker_version = 4; // Set on VERSION_MISMATCH.
+}
+
+// ----- Session end ----------------------------------------------------
+
+message SessionEnd {
+  enum Reason {
+    REASON_UNSPECIFIED = 0;
+    REASON_VICTORY = 1;
+    REASON_DEFEAT = 2;
+    REASON_OPERATOR_TERMINATED = 3;
+    REASON_GAME_CRASHED = 4;
+    REASON_PROXY_DISCONNECTED = 5;
+  }
+  bytes session_id = 1;
+  Reason reason = 2;
+  string detail = 3;
+}

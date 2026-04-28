@@ -1,0 +1,8 @@
+  A Broker.Tui.TickLoop.VizController.Status() : FSharpOption<String>
+  A Broker.Tui.TickLoop.VizController.Toggle() : Void
+  C Broker.Tui.TickLoop.UiMode.Dashboard()
+  C Broker.Tui.TickLoop.UiMode.Lobby(draft:LobbyConfig)
+M Broker.Tui.TickLoop.dispatch(core:CoreFacade, uiMode:UiMode, action:Action) : UiMode
+M Broker.Tui.TickLoop.run(core:CoreFacade, viz:FSharpOption<VizController>, tickIntervalMs:Int32, cancellationToken:CancellationToken) : Task<Unit>
+T Broker.Tui.TickLoop.UiMode : union
+T Broker.Tui.TickLoop.VizController : interface

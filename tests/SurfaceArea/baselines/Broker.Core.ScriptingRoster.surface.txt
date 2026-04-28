@@ -1,0 +1,21 @@
+  C Broker.Core.ScriptingRoster.RosterError.NameInUse()
+  C Broker.Core.ScriptingRoster.RosterError.NotFound(Item:ScriptingClientId)
+  F Broker.Core.ScriptingRoster.Roster.members : FSharpMap<ScriptingClientId,ScriptingClient>
+  F Broker.Core.ScriptingRoster.ScriptingClient.boundSlot : FSharpOption<Int32>
+  F Broker.Core.ScriptingRoster.ScriptingClient.commandQueueDepth : Int32
+  F Broker.Core.ScriptingRoster.ScriptingClient.connectedAt : DateTimeOffset
+  F Broker.Core.ScriptingRoster.ScriptingClient.id : ScriptingClientId
+  F Broker.Core.ScriptingRoster.ScriptingClient.isAdmin : Boolean
+  F Broker.Core.ScriptingRoster.ScriptingClient.protocolVersion : Version
+M Broker.Core.ScriptingRoster.get_empty() : Roster
+M Broker.Core.ScriptingRoster.grantAdmin(id:ScriptingClientId, roster:Roster) : FSharpResult<Roster,RosterError>
+M Broker.Core.ScriptingRoster.isAdmin(id:ScriptingClientId, roster:Roster) : Boolean
+M Broker.Core.ScriptingRoster.remove(id:ScriptingClientId, roster:Roster) : Roster
+M Broker.Core.ScriptingRoster.revokeAdmin(id:ScriptingClientId, roster:Roster) : FSharpResult<Roster,RosterError>
+M Broker.Core.ScriptingRoster.toList(roster:Roster) : FSharpList<ScriptingClient>
+M Broker.Core.ScriptingRoster.tryAdd(id:ScriptingClientId, version:Version, connectedAt:DateTimeOffset, roster:Roster) : FSharpResult<Roster,RosterError>
+M Broker.Core.ScriptingRoster.tryFind(id:ScriptingClientId, roster:Roster) : FSharpOption<ScriptingClient>
+P Broker.Core.ScriptingRoster.empty : Roster
+T Broker.Core.ScriptingRoster.Roster : record
+T Broker.Core.ScriptingRoster.RosterError : union
+T Broker.Core.ScriptingRoster.ScriptingClient : record

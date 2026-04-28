@@ -1,0 +1,44 @@
+  F Broker.Core.Snapshot.Building.classId : String
+  F Broker.Core.Snapshot.Building.id : UInt32
+  F Broker.Core.Snapshot.Building.ownerPlayerId : Int32
+  F Broker.Core.Snapshot.Building.pos : Vec2
+  F Broker.Core.Snapshot.EconomyStats.expenditure : ResourceVector
+  F Broker.Core.Snapshot.EconomyStats.income : ResourceVector
+  F Broker.Core.Snapshot.GameStateSnapshot.buildings : FSharpList<Building>
+  F Broker.Core.Snapshot.GameStateSnapshot.capturedAt : DateTimeOffset
+  F Broker.Core.Snapshot.GameStateSnapshot.mapMeta : FSharpOption<MapMeta>
+  F Broker.Core.Snapshot.GameStateSnapshot.players : FSharpList<PlayerTelemetry>
+  F Broker.Core.Snapshot.GameStateSnapshot.sessionId : Guid
+  F Broker.Core.Snapshot.GameStateSnapshot.tick : Int64
+  F Broker.Core.Snapshot.GameStateSnapshot.units : FSharpList<Unit>
+  F Broker.Core.Snapshot.MapMeta.mapName : String
+  F Broker.Core.Snapshot.MapMeta.outline : Byte[]
+  F Broker.Core.Snapshot.MapMeta.size : Vec2
+  F Broker.Core.Snapshot.PlayerTelemetry.buildingCount : Int32
+  F Broker.Core.Snapshot.PlayerTelemetry.economy : EconomyStats
+  F Broker.Core.Snapshot.PlayerTelemetry.kills : Int32
+  F Broker.Core.Snapshot.PlayerTelemetry.losses : Int32
+  F Broker.Core.Snapshot.PlayerTelemetry.name : String
+  F Broker.Core.Snapshot.PlayerTelemetry.playerId : Int32
+  F Broker.Core.Snapshot.PlayerTelemetry.resources : ResourceVector
+  F Broker.Core.Snapshot.PlayerTelemetry.teamId : Int32
+  F Broker.Core.Snapshot.PlayerTelemetry.unitClassBreakdown : FSharpMap<String,Int32>
+  F Broker.Core.Snapshot.PlayerTelemetry.unitCount : Int32
+  F Broker.Core.Snapshot.ResourceVector.energy : Double
+  F Broker.Core.Snapshot.ResourceVector.metal : Double
+  F Broker.Core.Snapshot.Unit.classId : String
+  F Broker.Core.Snapshot.Unit.id : UInt32
+  F Broker.Core.Snapshot.Unit.ownerPlayerId : Int32
+  F Broker.Core.Snapshot.Unit.pos : Vec2
+  F Broker.Core.Snapshot.Vec2.x : Single
+  F Broker.Core.Snapshot.Vec2.y : Single
+M Broker.Core.Snapshot.isStrictlyAfter(prev:GameStateSnapshot, next:GameStateSnapshot) : Boolean
+M Broker.Core.Snapshot.mapMetaOnFirstOnly(prev:FSharpOption<GameStateSnapshot>, next:GameStateSnapshot) : GameStateSnapshot
+T Broker.Core.Snapshot.Building : record
+T Broker.Core.Snapshot.EconomyStats : record
+T Broker.Core.Snapshot.GameStateSnapshot : record
+T Broker.Core.Snapshot.MapMeta : record
+T Broker.Core.Snapshot.PlayerTelemetry : record
+T Broker.Core.Snapshot.ResourceVector : record
+T Broker.Core.Snapshot.Unit : record
+T Broker.Core.Snapshot.Vec2 : record

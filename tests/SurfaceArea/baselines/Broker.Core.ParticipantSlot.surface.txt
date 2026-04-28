@@ -1,0 +1,15 @@
+  C Broker.Core.ParticipantSlot.ParticipantKind.BuiltInAi(difficulty:Int32)
+  C Broker.Core.ParticipantSlot.ParticipantKind.Human()
+  C Broker.Core.ParticipantSlot.ParticipantKind.ProxyAi()
+  C Broker.Core.ParticipantSlot.SingleWriterError.SlotAlreadyBound(slot:Int32, existingOwner:ScriptingClientId)
+  C Broker.Core.ParticipantSlot.SingleWriterError.SlotNotProxyAi(slot:Int32)
+  F Broker.Core.ParticipantSlot.ParticipantSlot.boundClient : FSharpOption<ScriptingClientId>
+  F Broker.Core.ParticipantSlot.ParticipantSlot.kind : ParticipantKind
+  F Broker.Core.ParticipantSlot.ParticipantSlot.slotIndex : Int32
+  F Broker.Core.ParticipantSlot.ParticipantSlot.team : Int32
+M Broker.Core.ParticipantSlot.checkBindings(slots:FSharpList<ParticipantSlot>) : FSharpResult<Unit,SingleWriterError>
+M Broker.Core.ParticipantSlot.tryBind(slot:Int32, client:ScriptingClientId, slots:FSharpList<ParticipantSlot>) : FSharpResult<FSharpList`1,SingleWriterError>
+M Broker.Core.ParticipantSlot.unbind(slot:Int32, slots:FSharpList<ParticipantSlot>) : FSharpList<ParticipantSlot>
+T Broker.Core.ParticipantSlot.ParticipantKind : union
+T Broker.Core.ParticipantSlot.ParticipantSlot : record
+T Broker.Core.ParticipantSlot.SingleWriterError : union

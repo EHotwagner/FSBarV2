@@ -1,0 +1,4 @@
+  A Broker.Viz.VizHost.Handle.get_IsOpen() : Boolean
+M Broker.Viz.VizHost.open_(snapshots:IObservable<GameStateSnapshot>) : Task<Handle>
+M Broker.Viz.VizHost.probe() : FSharpResult<Unit,String>
+T Broker.Viz.VizHost.Handle : interface

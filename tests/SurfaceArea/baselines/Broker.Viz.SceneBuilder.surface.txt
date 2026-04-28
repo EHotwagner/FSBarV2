@@ -1,0 +1,26 @@
+  F Broker.Viz.SceneBuilder.PlayerColor.b : Byte
+  F Broker.Viz.SceneBuilder.PlayerColor.g : Byte
+  F Broker.Viz.SceneBuilder.PlayerColor.r : Byte
+  F Broker.Viz.SceneBuilder.Scene.skScene : Scene
+  F Broker.Viz.SceneBuilder.Scene.summary : SceneSummary
+  F Broker.Viz.SceneBuilder.SceneEntity.id : UInt32
+  F Broker.Viz.SceneBuilder.SceneEntity.isBuilding : Boolean
+  F Broker.Viz.SceneBuilder.SceneEntity.ownerPlayerId : Int32
+  F Broker.Viz.SceneBuilder.SceneEntity.pos : Vec2
+  F Broker.Viz.SceneBuilder.SceneSummary.entities : FSharpList<SceneEntity>
+  F Broker.Viz.SceneBuilder.SceneSummary.mapName : FSharpOption<String>
+  F Broker.Viz.SceneBuilder.SceneSummary.mapOutlineByteCount : Int32
+  F Broker.Viz.SceneBuilder.SceneSummary.mapSize : FSharpOption<Vec2>
+  F Broker.Viz.SceneBuilder.SceneSummary.ownership : FSharpMap<Int32,PlayerColor>
+  F Broker.Viz.SceneBuilder.SceneSummary.sessionId : Guid
+  F Broker.Viz.SceneBuilder.SceneSummary.snapshotTick : Int64
+M Broker.Viz.SceneBuilder.build(snapshot:GameStateSnapshot) : Scene
+M Broker.Viz.SceneBuilder.get_empty() : Scene
+M Broker.Viz.SceneBuilder.playerColor(playerId:Int32, teamId:Int32) : PlayerColor
+M Broker.Viz.SceneBuilder.summary(scene:Scene) : SceneSummary
+M Broker.Viz.SceneBuilder.toSkiaScene(scene:Scene) : Scene
+P Broker.Viz.SceneBuilder.empty : Scene
+T Broker.Viz.SceneBuilder.PlayerColor : record
+T Broker.Viz.SceneBuilder.Scene : record
+T Broker.Viz.SceneBuilder.SceneEntity : record
+T Broker.Viz.SceneBuilder.SceneSummary : record

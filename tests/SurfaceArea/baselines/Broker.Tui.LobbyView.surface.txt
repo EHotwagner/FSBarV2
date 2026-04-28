@@ -1,0 +1,2 @@
+M Broker.Tui.LobbyView.apply(key:ConsoleKeyInfo, draft:LobbyConfig) : LobbyConfig
+M Broker.Tui.LobbyView.render(draft:LobbyConfig) : Layout

@@ -1,0 +1,1 @@
+M Broker.Protocol.VersionHandshake.check(broker:Version, peer:Version) : FSharpResult<Unit,Version>

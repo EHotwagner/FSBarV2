@@ -1,0 +1,9 @@
+  C Broker.Tui.Layout.Slot.BrokerPane()
+  C Broker.Tui.Layout.Slot.ClientsPane()
+  C Broker.Tui.Layout.Slot.Footer()
+  C Broker.Tui.Layout.Slot.Header()
+  C Broker.Tui.Layout.Slot.SessionPane()
+  C Broker.Tui.Layout.Slot.TelemetryPane()
+M Broker.Tui.Layout.rootLayout() : Layout
+M Broker.Tui.Layout.tryGetSlot(root:Layout, slot:Slot) : FSharpOption<Layout>
+T Broker.Tui.Layout.Slot : union

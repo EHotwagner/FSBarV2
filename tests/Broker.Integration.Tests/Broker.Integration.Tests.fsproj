@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <GenerateProgramFile>false</GenerateProgramFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="ScriptingClientEndToEndTests.fs" />
+    <Compile Include="AuditLifecycleTests.fs" />
+    <Compile Include="AdminElevationTests.fs" />
+    <Compile Include="SyntheticProxy.fs" />
+    <Compile Include="SnapshotE2ETests.fs" />
+    <Compile Include="Sc003LatencyTests.fs" />
+    <Compile Include="Sc005RecoveryTests.fs" />
+    <Compile Include="GameProcessTests.fs" />
+    <Compile Include="DashboardLoadTests.fs" />
+    <Compile Include="VizSceneBuilderTests.fs" />
+    <Compile Include="VizHostProbeTests.fs" />
+    <Compile Include="VizSc008Tests.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Broker.Protocol\Broker.Protocol.fsproj" />
+    <ProjectReference Include="..\..\src\Broker.Contracts\Broker.Contracts.fsproj" />
+    <ProjectReference Include="..\..\src\Broker.Core\Broker.Core.fsproj" />
+    <ProjectReference Include="..\..\src\Broker.Tui\Broker.Tui.fsproj" />
+    <ProjectReference Include="..\..\src\Broker.App\Broker.App.fsproj" />
+    <ProjectReference Include="..\..\src\Broker.Viz\Broker.Viz.fsproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Expecto" Version="10.2.2" />
+    <PackageReference Include="Grpc.Net.Client" Version="2.76.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="YoloDev.Expecto.TestSdk" Version="0.15.3" />
+  </ItemGroup>
+
+</Project>

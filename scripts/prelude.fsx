@@ -1,4 +1,4 @@
-// prelude.fsx — load the packed library from your local NuGet cache.
+// prelude.fsx — load the packed Broker libraries from your local NuGet cache.
 //
 // Principle I: every non-trivial change starts in FSI against the public
 // surface. This prelude gives you that surface in one #load.
@@ -6,15 +6,23 @@
 // Usage from FSI (dotnet fsi or VS Code Ionide):
 //   dotnet fsi
 //   > #load "scripts/prelude.fsx" ;;
-//   > open FSBarV2 ;;
-//   > Library.add 2 3 ;;
+//   > open Broker.Core ;;
+//   > Mode.transition Mode.Mode.Idle Mode.Mode.Guest ;;
+//
+// To pack the libraries first:
+//   dotnet pack src/Broker.Core/Broker.Core.fsproj      -o ~/.local/share/nuget-local/
+//   dotnet pack src/Broker.Contracts/Broker.Contracts.fsproj -o ~/.local/share/nuget-local/
+//
+// Once the libraries' .fs bodies are real (Phase 3+), the values below
+// return real results instead of throwing `failwith "not implemented"`.
 
-// Resolve the latest locally-packed version from ~/.local/share/nuget-local/.
-// After `dotnet pack`, the patch version bumps; the #r below pulls the
-// highest SemVer.
 #i "nuget: file:///home/developer/.local/share/nuget-local/"
-#r "nuget: FSBarV2"
+#r "nuget: Broker.Core"
+#r "nuget: Broker.Contracts"
 
-open FSBarV2
+open Broker.Core
 
-printfn "prelude: FSBarV2 loaded. Try: Library.add 2 3"
+printfn "prelude: Broker.Core loaded."
+printfn "  Try:   Mode.transition Mode.Mode.Idle Mode.Mode.Guest"
+printfn "  Try:   ScriptingRoster.empty"
+printfn "  Note:  Phase-2 stubs throw 'not implemented'; that is expected."

@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <AssemblyName>broker</AssemblyName>
+    <Description>CLI composition root for the TUI gRPC Game Broker.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Cli.fsi" />
+    <Compile Include="Cli.fs" />
+    <Compile Include="Logging.fsi" />
+    <Compile Include="Logging.fs" />
+    <Compile Include="GameProcess.fsi" />
+    <Compile Include="GameProcess.fs" />
+    <Compile Include="VizControllerImpl.fsi" />
+    <Compile Include="VizControllerImpl.fs" />
+    <Compile Include="Program.fsi" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Broker.Core\Broker.Core.fsproj" />
+    <ProjectReference Include="..\Broker.Protocol\Broker.Protocol.fsproj" />
+    <ProjectReference Include="..\Broker.Tui\Broker.Tui.fsproj" />
+    <ProjectReference Include="..\Broker.Viz\Broker.Viz.fsproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Serilog" Version="4.3.1" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+  </ItemGroup>
+
+</Project>

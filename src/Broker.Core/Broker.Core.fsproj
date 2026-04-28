@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <IsPackable>true</IsPackable>
+    <PackageId>Broker.Core</PackageId>
+    <Description>Pure F# session, command, and state-machine logic for the broker. No I/O.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="ParticipantSlot.fsi" />
+    <Compile Include="ParticipantSlot.fs" />
+    <Compile Include="Snapshot.fsi" />
+    <Compile Include="Snapshot.fs" />
+    <Compile Include="Lobby.fsi" />
+    <Compile Include="Lobby.fs" />
+    <Compile Include="Mode.fsi" />
+    <Compile Include="Mode.fs" />
+    <Compile Include="ScriptingRoster.fsi" />
+    <Compile Include="ScriptingRoster.fs" />
+    <Compile Include="CommandPipeline.fsi" />
+    <Compile Include="CommandPipeline.fs" />
+    <Compile Include="Session.fsi" />
+    <Compile Include="Session.fs" />
+    <Compile Include="Audit.fsi" />
+    <Compile Include="Audit.fs" />
+    <Compile Include="Dashboard.fsi" />
+    <Compile Include="Dashboard.fs" />
+  </ItemGroup>
+
+</Project>

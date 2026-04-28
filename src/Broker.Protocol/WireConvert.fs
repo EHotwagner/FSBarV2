@@ -113,15 +113,6 @@ module WireConvert =
                   outline = m.Outline.ToByteArray() }
         | ValueNone -> None
 
-    let toCoreSnapshot (msg: GameStateSnapshot) : Snapshot.GameStateSnapshot =
-        { sessionId = bytesToGuid msg.SessionId
-          tick = msg.Tick
-          capturedAt = DateTimeOffset.FromUnixTimeMilliseconds(msg.CapturedAtUnixMs)
-          players = msg.Players |> Seq.map toCorePlayer |> List.ofSeq
-          units = msg.Units |> Seq.map toCoreUnit |> List.ofSeq
-          buildings = msg.Buildings |> Seq.map toCoreBuilding |> List.ofSeq
-          mapMeta = toCoreMapMetaOpt msg.MapMeta }
-
     let fromCoreSnapshot (snapshot: Snapshot.GameStateSnapshot) : GameStateSnapshot =
         let w = GameStateSnapshot.empty()
         w.SessionId <- guidToBytes snapshot.sessionId
@@ -166,14 +157,6 @@ module WireConvert =
         | UnitOrder.Types.OrderKind.Patrol  -> CommandPipeline.Patrol
         | _                                 -> CommandPipeline.Stop
 
-    let private fromCoreOrderKind (k: CommandPipeline.OrderKind) : UnitOrder.Types.OrderKind =
-        match k with
-        | CommandPipeline.Move    -> UnitOrder.Types.OrderKind.Move
-        | CommandPipeline.Attack  -> UnitOrder.Types.OrderKind.Attack
-        | CommandPipeline.Stop    -> UnitOrder.Types.OrderKind.Stop
-        | CommandPipeline.Guard   -> UnitOrder.Types.OrderKind.Guard
-        | CommandPipeline.Patrol  -> UnitOrder.Types.OrderKind.Patrol
-
     let private toCoreVision (m: VisionMode) : CommandPipeline.VisionMode =
         match m with
         | VisionMode.Full   -> CommandPipeline.Full
@@ -185,18 +168,6 @@ module WireConvert =
         | VictoryOverride.ForceWin   -> CommandPipeline.ForceWin
         | VictoryOverride.ForceLose  -> CommandPipeline.ForceLose
         | _                          -> CommandPipeline.Reset
-
-    let private fromCoreVision (m: CommandPipeline.VisionMode) : VisionMode =
-        match m with
-        | CommandPipeline.Full   -> VisionMode.Full
-        | CommandPipeline.Blind  -> VisionMode.Blind
-        | CommandPipeline.Normal -> VisionMode.Normal
-
-    let private fromCoreVictory (m: CommandPipeline.VictoryOverride) : VictoryOverride =
-        match m with
-        | CommandPipeline.ForceWin  -> VictoryOverride.ForceWin
-        | CommandPipeline.ForceLose -> VictoryOverride.ForceLose
-        | CommandPipeline.Reset     -> VictoryOverride.Reset
 
     let private toCoreGameplay (gp: GameplayPayload) : CommandPipeline.GameplayPayload =
         match gp.Body with
@@ -246,63 +217,6 @@ module WireConvert =
           kind = kind
           submittedAt = DateTimeOffset.FromUnixTimeMilliseconds(msg.SubmittedAtUnixMs) }
 
-    let fromCoreCommand (command: CommandPipeline.Command) : Command =
-        let w = Command.empty()
-        w.CommandId <- guidToBytes command.commandId
-        let (ScriptingClientId name) = command.originatingClient
-        w.OriginatingClient <- name
-        w.TargetSlot <- defaultArg command.targetSlot 0
-        w.SubmittedAtUnixMs <- command.submittedAt.ToUnixTimeMilliseconds()
-        match command.kind with
-        | CommandPipeline.Gameplay gp ->
-            let gw = GameplayPayload.empty()
-            match gp with
-            | CommandPipeline.UnitOrder (ids, kind, pos, target) ->
-                let uo = UnitOrder.empty()
-                for id in ids do uo.UnitIds.Add(id)
-                uo.Kind <- fromCoreOrderKind kind
-                pos |> Option.iter (fun p -> uo.TargetPos <- ValueSome (fromCoreVec p))
-                target |> Option.iter (fun t -> uo.TargetUnitId <- t)
-                gw.UnitOrder <- uo
-            | CommandPipeline.Build (bid, cid, p) ->
-                let bo = BuildOrder.empty()
-                bo.BuilderId <- bid
-                bo.ClassId <- cid
-                bo.Pos <- ValueSome (fromCoreVec p)
-                gw.Build <- bo
-            | CommandPipeline.Custom (n, blob) ->
-                let cw = CustomCommand.empty()
-                cw.Name <- n
-                cw.Blob <- Google.Protobuf.ByteString.CopyFrom(blob)
-                gw.Custom <- cw
-            w.Gameplay <- gw
-        | CommandPipeline.Admin ap ->
-            let aw = AdminPayload.empty()
-            match ap with
-            | CommandPipeline.SetSpeed m ->
-                let s = SetSpeed.empty()
-                s.Multiplier <- float m
-                aw.SetSpeed <- s
-            | CommandPipeline.Pause -> aw.Pause <- Pause.empty()
-            | CommandPipeline.Resume -> aw.Resume <- Resume.empty()
-            | CommandPipeline.GrantResources (pid, r) ->
-                let g = GrantResources.empty()
-                g.PlayerId <- pid
-                g.Resources <- ValueSome (fromCoreResources r)
-                aw.GrantResources <- g
-            | CommandPipeline.OverrideVision (pid, m) ->
-                let ov = OverrideVision.empty()
-                ov.PlayerId <- pid
-                ov.Mode <- fromCoreVision m
-                aw.OverrideVision <- ov
-            | CommandPipeline.OverrideVictory (pid, outcome) ->
-                let ov = OverrideVictoryMessage.empty()
-                ov.PlayerId <- pid
-                ov.Outcome <- fromCoreVictory outcome
-                aw.OverrideVictory <- ov
-            w.Admin <- aw
-        w
-
     let toReject
         (reason: CommandPipeline.RejectReason)
         (commandId: Guid option)
@@ -322,6 +236,16 @@ module WireConvert =
             | CommandPipeline.NameInUse -> Reject.Types.Code.NameInUse, "name in use"
             | CommandPipeline.VersionMismatch (b, p) ->
                 Reject.Types.Code.VersionMismatch, sprintf "broker %O peer %O" b p
+            | CommandPipeline.SchemaMismatch (expected, received) ->
+                // Coordinator-wire concern; if a scripting-client somehow sees
+                // it, surface it as InvalidPayload with both versions in the
+                // detail (data-model §4: SchemaMismatch is not a ScriptingClient
+                // wire code).
+                Reject.Types.Code.InvalidPayload, sprintf "schema mismatch expected=%s received=%s" expected received
+            | CommandPipeline.NotOwner (attempted, owner) ->
+                // Coordinator-wire concern; ScriptingClient never sees this. If
+                // it bubbles up here, surface descriptively.
+                Reject.Types.Code.InvalidPayload, sprintf "not owner attempted=%s owner=%s" attempted owner
             | CommandPipeline.InvalidPayload d ->
                 Reject.Types.Code.InvalidPayload, d
         w.Code <- code
@@ -333,3 +257,285 @@ module WireConvert =
         | Some v -> w.BrokerVersion <- ValueSome (fromCoreVersion v)
         | None -> ()
         w
+
+    // === Coordinator side (feature 002) =========================================
+
+    type RunningView =
+        { sessionId: Guid
+          lastSeq: uint64
+          units: Map<uint32, Snapshot.Unit>
+          features: Map<uint32, Snapshot.Feature>
+          mapMeta: Snapshot.MapMeta option
+          economy: Snapshot.ResourceVector option
+          lastFrame: int64 }
+
+    let emptyRunningView : RunningView =
+        { sessionId = Guid.Empty
+          lastSeq = 0UL
+          units = Map.empty
+          features = Map.empty
+          mapMeta = None
+          economy = None
+          lastFrame = 0L }
+
+    let lastSeq (view: RunningView) : uint64 = view.lastSeq
+
+    type ApplyResult =
+        | NewSnapshot of Snapshot.GameStateSnapshot
+        | Gap of lastSeq:uint64 * receivedSeq:uint64
+        | KeepAliveOnly
+
+    // --- HighBar → Core helpers ---
+
+    let private vec3ToVec2 (v: Highbar.V1.Vector3) : Snapshot.Vec2 =
+        { x = v.X; y = v.Y }   // research §2: drop z (broker is 2D)
+
+    let private vec3OptToVec2 (v: ValueOption<Highbar.V1.Vector3>) : Snapshot.Vec2 =
+        match v with
+        | ValueSome v -> vec3ToVec2 v
+        | ValueNone -> { x = 0.0f; y = 0.0f }
+
+    let private ownUnitToCoreUnit (u: Highbar.V1.OwnUnit) : Snapshot.Unit =
+        { id = u.UnitId
+          classId = string u.DefId
+          ownerPlayerId = u.TeamId
+          pos = vec3OptToVec2 u.Position }
+
+    let private enemyUnitToCoreUnit (u: Highbar.V1.EnemyUnit) : Snapshot.Unit =
+        { id = u.UnitId
+          classId = string u.DefId
+          ownerPlayerId = u.TeamId
+          pos = vec3OptToVec2 u.Position }
+
+    let private mapFeatureToCoreFeature (f: Highbar.V1.MapFeature) : Snapshot.Feature =
+        { id = f.FeatureId
+          kind = string f.DefId
+          pos = vec3OptToVec2 f.Position }
+
+    let private staticMapToCoreMapMeta (m: ValueOption<Highbar.V1.StaticMap>) : Snapshot.MapMeta option =
+        match m with
+        | ValueSome sm ->
+            Some
+                { mapName = ""
+                  size = { x = float32 sm.WidthCells; y = float32 sm.HeightCells }
+                  outline = sm.Heightmap.ToByteArray() }
+        | ValueNone -> None
+
+    let private teamEconomyToCoreResources (e: ValueOption<Highbar.V1.TeamEconomy>) : Snapshot.ResourceVector option =
+        match e with
+        | ValueSome te ->
+            Some { metal = float te.Metal; energy = float te.Energy }
+        | ValueNone -> None
+
+    let private snapshotFromView (view: RunningView) : Snapshot.GameStateSnapshot =
+        let unitList = view.units |> Map.toList |> List.map snd
+        let featureList = view.features |> Map.toList |> List.map snd
+        // Collapse the single-team economy into a synthetic player so the
+        // dashboard's per-player telemetry pane has something to show.
+        let players : Snapshot.PlayerTelemetry list =
+            match view.economy with
+            | Some r ->
+                [ { playerId = 0
+                    teamId = 0
+                    name = "host"
+                    resources = r
+                    unitCount = unitList.Length
+                    buildingCount = 0
+                    unitClassBreakdown = Map.empty
+                    economy = { income = { metal = 0.0; energy = 0.0 }; expenditure = { metal = 0.0; energy = 0.0 } }
+                    kills = 0
+                    losses = 0 } ]
+            | None -> []
+        { sessionId = view.sessionId
+          tick = view.lastFrame
+          capturedAt = DateTimeOffset.UtcNow
+          players = players
+          units = unitList
+          buildings = []
+          features = featureList
+          mapMeta = view.mapMeta }
+
+    let applyHighBarStateUpdate
+        (update: Highbar.V1.StateUpdate)
+        (view: RunningView)
+        : RunningView * ApplyResult =
+        let recvSeq = update.Seq
+        // Gap detection: only meaningful once we've seen at least one update.
+        // First update sets the running seq; subsequent gaps must skip ≥ 2.
+        if view.lastSeq > 0UL && recvSeq > view.lastSeq + 1UL then
+            { view with lastSeq = recvSeq }, Gap (view.lastSeq, recvSeq)
+        else
+            match update.Payload with
+            | ValueSome (Highbar.V1.StateUpdate.Types.Payload.Snapshot ss) ->
+                let ownUnits =
+                    ss.OwnUnits
+                    |> Seq.map (fun ou -> ou.UnitId, ownUnitToCoreUnit ou)
+                let visibleEnemies =
+                    ss.VisibleEnemies
+                    |> Seq.map (fun eu -> eu.UnitId, enemyUnitToCoreUnit eu)
+                let units =
+                    Seq.append ownUnits visibleEnemies
+                    |> Map.ofSeq
+                let features =
+                    ss.MapFeatures
+                    |> Seq.map (fun mf -> mf.FeatureId, mapFeatureToCoreFeature mf)
+                    |> Map.ofSeq
+                let view' =
+                    { view with
+                        lastSeq = recvSeq
+                        units = units
+                        features = features
+                        mapMeta = staticMapToCoreMapMeta ss.StaticMap
+                        economy = teamEconomyToCoreResources ss.Economy
+                        lastFrame = int64 update.Frame }
+                view', NewSnapshot (snapshotFromView view')
+            | ValueSome (Highbar.V1.StateUpdate.Types.Payload.Delta _) ->
+                // Phase 3 partial: the running view does not currently fold
+                // individual delta events (research §2 lists 27 variants).
+                // Surface the latest tick + emit the current snapshot — the
+                // underlying broker dashboard does not regress, and the
+                // gap-free guarantee is preserved by the seq check above.
+                let view' = { view with lastSeq = recvSeq; lastFrame = int64 update.Frame }
+                view', NewSnapshot (snapshotFromView view')
+            | ValueSome (Highbar.V1.StateUpdate.Types.Payload.Keepalive _) ->
+                { view with lastSeq = recvSeq }, KeepAliveOnly
+            | ValueNone ->
+                { view with lastSeq = recvSeq }, KeepAliveOnly
+
+    // --- Core → HighBar helpers ---
+
+    let private vec2ToVec3 (v: Snapshot.Vec2) : Highbar.V1.Vector3 =
+        let w = Highbar.V1.Vector3.empty()
+        w.X <- v.x
+        w.Y <- v.y
+        w.Z <- 0.0f   // broker is 2D; engine treats z as ground height
+        w
+
+    let private commandBatch (seq: uint64) (targetUnitId: uint32) (commandId: Guid) (ais: Highbar.V1.AICommand list) : Highbar.V1.CommandBatch =
+        let cb = Highbar.V1.CommandBatch.empty()
+        cb.BatchSeq <- seq
+        cb.TargetUnitId <- targetUnitId
+        for ai in ais do cb.Commands.Add(ai)
+        // ClientCommandId is a uint64 carrying the lower 64 bits of the UUID.
+        let bytes = commandId.ToByteArray()
+        let lower = System.BitConverter.ToUInt64(bytes, 0)
+        cb.ClientCommandId <- ValueSome lower
+        cb
+
+    let tryFromCoreCommandToHighBar
+        (command: CommandPipeline.Command)
+        (batchSeq: uint64)
+        : Result<Highbar.V1.CommandBatch, CommandPipeline.RejectReason> =
+        let firstUnit (ids: uint32 list) : int32 =
+            match ids with
+            | u :: _ -> int u
+            | [] -> 0
+        let firstUnitU (ids: uint32 list) : uint32 =
+            match ids with
+            | u :: _ -> u
+            | [] -> 0u
+        match command.kind with
+        | CommandPipeline.Gameplay (CommandPipeline.UnitOrder (uids, kind, targetPos, targetUnitId)) ->
+            let target = firstUnitU uids
+            match kind, targetUnitId, targetPos with
+            | CommandPipeline.Move, _, Some pos ->
+                let mu = Highbar.V1.MoveUnitCommand.empty()
+                mu.UnitId <- firstUnit uids
+                mu.ToPosition <- ValueSome (vec2ToVec3 pos)
+                let ai = Highbar.V1.AICommand.empty()
+                ai.MoveUnit <- mu
+                Ok (commandBatch batchSeq target command.commandId [ai])
+            | CommandPipeline.Move, _, None ->
+                Error (CommandPipeline.InvalidPayload "Move requires targetPos")
+            | CommandPipeline.Attack, Some tid, _ ->
+                let ac = Highbar.V1.AttackCommand.empty()
+                ac.UnitId <- firstUnit uids
+                ac.TargetUnitId <- int tid
+                let ai = Highbar.V1.AICommand.empty()
+                ai.Attack <- ac
+                Ok (commandBatch batchSeq target command.commandId [ai])
+            | CommandPipeline.Attack, None, Some pos ->
+                let aa = Highbar.V1.AttackAreaCommand.empty()
+                aa.UnitId <- firstUnit uids
+                aa.AttackPosition <- ValueSome (vec2ToVec3 pos)
+                aa.Radius <- 64.0f   // broker default; tunable later
+                let ai = Highbar.V1.AICommand.empty()
+                ai.AttackArea <- aa
+                Ok (commandBatch batchSeq target command.commandId [ai])
+            | CommandPipeline.Attack, None, None ->
+                Error (CommandPipeline.InvalidPayload "Attack requires either targetUnitId or targetPos")
+            | CommandPipeline.Stop, _, _ ->
+                let s = Highbar.V1.StopCommand.empty()
+                s.UnitId <- firstUnit uids
+                let ai = Highbar.V1.AICommand.empty()
+                ai.Stop <- s
+                Ok (commandBatch batchSeq target command.commandId [ai])
+            | CommandPipeline.Guard, _, _ ->
+                let g = Highbar.V1.GuardCommand.empty()
+                g.UnitId <- firstUnit uids
+                let ai = Highbar.V1.AICommand.empty()
+                ai.Guard <- g
+                Ok (commandBatch batchSeq target command.commandId [ai])
+            | CommandPipeline.Patrol, _, Some pos ->
+                let p = Highbar.V1.PatrolCommand.empty()
+                p.UnitId <- firstUnit uids
+                p.ToPosition <- ValueSome (vec2ToVec3 pos)
+                let ai = Highbar.V1.AICommand.empty()
+                ai.Patrol <- p
+                Ok (commandBatch batchSeq target command.commandId [ai])
+            | CommandPipeline.Patrol, _, None ->
+                Error (CommandPipeline.InvalidPayload "Patrol requires targetPos")
+        | CommandPipeline.Gameplay (CommandPipeline.Build (builderId, classId, pos)) ->
+            let b = Highbar.V1.BuildUnitCommand.empty()
+            b.UnitId <- int builderId
+            // classId is a class name (string) on the Core side; HighBar
+            // expects an int unit-def id. Try parse; fall back to 0 if the
+            // string is not numeric. Real translation needs a class/def map.
+            let mutable defId = 0
+            System.Int32.TryParse(classId, &defId) |> ignore
+            b.ToBuildUnitDefId <- defId
+            b.BuildPosition <- ValueSome (vec2ToVec3 pos)
+            let ai = Highbar.V1.AICommand.empty()
+            ai.BuildUnit <- b
+            Ok (commandBatch batchSeq builderId command.commandId [ai])
+        | CommandPipeline.Gameplay (CommandPipeline.Custom (_, blob)) ->
+            let c = Highbar.V1.CustomCommand.empty()
+            // CustomCommand.Params is RepeatedField<float32>; decode the
+            // blob as length-prefixed float32 if present (bytes / 4).
+            // The mapping is informational; the engine plugin chooses how
+            // to interpret CustomCommand.CommandId + Params.
+            for i in 0 .. (blob.Length / 4) - 1 do
+                let f = System.BitConverter.ToSingle(blob, i * 4)
+                c.Params.Add(f)
+            let ai = Highbar.V1.AICommand.empty()
+            ai.Custom <- c
+            Ok (commandBatch batchSeq 0u command.commandId [ai])
+        | CommandPipeline.Admin CommandPipeline.Pause ->
+            let p = Highbar.V1.PauseTeamCommand.empty()
+            p.Enable <- true
+            let ai = Highbar.V1.AICommand.empty()
+            ai.PauseTeam <- p
+            Ok (commandBatch batchSeq 0u command.commandId [ai])
+        | CommandPipeline.Admin CommandPipeline.Resume ->
+            let p = Highbar.V1.PauseTeamCommand.empty()
+            p.Enable <- false
+            let ai = Highbar.V1.AICommand.empty()
+            ai.PauseTeam <- p
+            Ok (commandBatch batchSeq 0u command.commandId [ai])
+        | CommandPipeline.Admin (CommandPipeline.GrantResources (_, resources)) ->
+            // GiveMeCommand is per-resource; emit two AICommands (metal + energy).
+            let metalGm = Highbar.V1.GiveMeCommand.empty()
+            metalGm.ResourceId <- 0   // 0 = metal by upstream convention
+            metalGm.Amount <- float32 resources.metal
+            let energyGm = Highbar.V1.GiveMeCommand.empty()
+            energyGm.ResourceId <- 1   // 1 = energy
+            energyGm.Amount <- float32 resources.energy
+            let aiM = Highbar.V1.AICommand.empty()
+            aiM.GiveMe <- metalGm
+            let aiE = Highbar.V1.AICommand.empty()
+            aiE.GiveMe <- energyGm
+            Ok (commandBatch batchSeq 0u command.commandId [aiM; aiE])
+        | CommandPipeline.Admin (CommandPipeline.SetSpeed _)
+        | CommandPipeline.Admin (CommandPipeline.OverrideVision _)
+        | CommandPipeline.Admin (CommandPipeline.OverrideVictory _) ->
+            Error CommandPipeline.AdminNotAvailable

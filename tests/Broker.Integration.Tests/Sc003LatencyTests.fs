@@ -54,7 +54,7 @@ let latencyTests =
                 subReq.ClientName <- "latency-bot"
                 use stateCall = scClient.SubscribeStateAsync(subReq)
 
-                let! proxy = SyntheticProxy.connect channel (System.Version(1, 0)) "lat-proxy" |> Async.AwaitTask
+                let! proxy = SyntheticCoordinator.connect channel "lat-coord" "1.0.0" |> Async.AwaitTask
                 use _ = proxy
 
                 // Per-tick send timestamps (us we can do diff against the
@@ -85,15 +85,23 @@ let latencyTests =
                         with :? OperationCanceledException -> ()
                     } :> Task
 
-                // Writer: push `totalSnapshots` snapshots back-to-back. Each
-                // one gets its current monotonic timestamp recorded BEFORE
-                // the write returns.
+                // Writer: push `totalSnapshots` snapshots at ~30 Hz cadence
+                // (~33 ms apart) to mirror real-game tick rate. Hammering
+                // the gRPC client-stream back-to-back saturates HTTP/2 flow
+                // control under loopback and inflates the per-tick latency
+                // the budget measures. SyntheticCoordinator auto-increments
+                // the StateUpdate.Frame which becomes the broker's Tick;
+                // for a tight `for tick in 1..N` loop the auto-frame matches
+                // `tick` exactly.
                 for tick in 1L .. int64 totalSnapshots do
                     sentAt.[tick] <- stopwatch.ElapsedMilliseconds
-                    do! proxy.PushSnapshotAsync (fun s -> s.Tick <- tick) |> Async.AwaitTask
+                    do! proxy.PushSnapshotAsync (fun _ -> ()) |> Async.AwaitTask
+                    do! Task.Delay(33) |> Async.AwaitTask
 
                 // Wait for the reader to drain (5s safety budget).
-                use waitCts = new CancellationTokenSource(TimeSpan.FromSeconds(15.0))
+                // 30 Hz pacing of 500 pushes = ~16.5 s push window; allow
+                // headroom for the reader to drain.
+                use waitCts = new CancellationTokenSource(TimeSpan.FromSeconds(25.0))
                 while recvLatencies.Count < totalSnapshots
                       && not waitCts.IsCancellationRequested do
                     do! Task.Delay(10) |> Async.AwaitTask

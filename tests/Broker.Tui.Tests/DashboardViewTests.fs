@@ -162,6 +162,7 @@ let dashboardViewTests =
                       mkPlayer 2 1 "Blue"  900.0 600.0  8 3 2 5 ]
                   units = []
                   buildings = []
+                  features = []
                   mapMeta = None }
             let reading =
                 { idleReading with

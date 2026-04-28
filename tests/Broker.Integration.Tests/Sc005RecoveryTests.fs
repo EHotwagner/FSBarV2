@@ -61,10 +61,12 @@ let recoveryTests =
                     subReq.ClientName <- sprintf "watcher-%d" trial
                     use stateCall = scClient.SubscribeStateAsync(subReq)
 
-                    // 2. Attach a synthetic proxy and push one snapshot so a
-                    //    session is fully Active.
-                    let! proxy = SyntheticProxy.connect channel (System.Version(1, 0)) (sprintf "proxy-%d" trial) |> Async.AwaitTask
-                    do! proxy.PushSnapshotAsync (fun s -> s.Tick <- int64 trial) |> Async.AwaitTask
+                    // 2. Attach a synthetic coordinator and push one snapshot
+                    //    so a session is fully Active.
+                    let! proxy =
+                        SyntheticCoordinator.connect channel (sprintf "coord-%d" trial) "1.0.0"
+                        |> Async.AwaitTask
+                    do! proxy.PushSnapshotAsync (fun _ -> ()) |> Async.AwaitTask
 
                     // Drain the initial snapshot so MoveNext on the next
                     // round lands exactly on the SessionEnd or stream-close.
@@ -94,10 +96,10 @@ let recoveryTests =
                     detects.Add(sw.ElapsedMilliseconds)
 
                     // 5. Recovery = broker back to Idle (proxyOutbound = None).
-                    let mutable recovered = BrokerState.proxyOutbound handle.Hub = None
+                    let mutable recovered = BrokerState.coordinatorCommandChannel handle.Hub = None
                     while not recovered && sw.ElapsedMilliseconds < recoverBudgetMs do
                         do! Task.Delay(50) |> Async.AwaitTask
-                        recovered <- BrokerState.proxyOutbound handle.Hub = None
+                        recovered <- BrokerState.coordinatorCommandChannel handle.Hub = None
                     recovers.Add(sw.ElapsedMilliseconds)
 
                     // 6. Cleanup the watcher so the next trial's name is free.

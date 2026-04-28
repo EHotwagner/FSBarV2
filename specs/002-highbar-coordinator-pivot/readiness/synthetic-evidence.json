@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "accept_synthetic": {
+    "timestamp": "2026-04-28T12:52:55.468679+00:00",
+    "justification": "feature 002 inventory: T023 (US1 CI evidence) and T032 (US2 CI evidence) are SyntheticCoordinator-driven; real-game closure owned by Phase 5 (T033-T037, T053). The 1 diff-scan hit is the T005 task-description text quoting historical stubs."
+  },
+  "graph_summary": {
+    "synthetic": 2,
+    "auto_synthetic": 0
+  },
+  "diff_scan": {
+    "base_ref": null,
+    "blocking": [
+      {
+        "file": "specs/002-highbar-coordinator-pivot/tasks.md",
+        "line": 94,
+        "pattern": "not-implemented",
+        "severity": "block",
+        "reason": "Placeholder exception in production code",
+        "match": "stub `.fs` whose bodies are `failwith \"not implemented\"`. Register"
+      }
+    ],
+    "advisory": []
+  }
+}

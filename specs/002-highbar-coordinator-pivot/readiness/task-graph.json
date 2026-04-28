@@ -1,0 +1,888 @@
+{
+  "schema_version": "1.0",
+  "verdict": "ok",
+  "errors": [],
+  "warnings": [],
+  "cycles": [],
+  "tasks": [
+    {
+      "id": "T001",
+      "declared": "done",
+      "effective": "done",
+      "phase": 1,
+      "story": null,
+      "tier": null,
+      "parallel": false,
+      "title": "Vendor the five HighBarV3 proto files (`coordinator.proto`,",
+      "explicit_deps": [],
+      "phase_deps": [],
+      "root_cause": []
+    },
+    {
+      "id": "T002",
+      "declared": "done",
+      "effective": "done",
+      "phase": 1,
+      "story": null,
+      "tier": null,
+      "parallel": true,
+      "title": "Update `src/Broker.Contracts/Broker.Contracts.fsproj` to",
+      "explicit_deps": [
+        "T001"
+      ],
+      "phase_deps": [],
+      "root_cause": []
+    },
+    {
+      "id": "T003",
+      "declared": "done",
+      "effective": "done",
+      "phase": 1,
+      "story": null,
+      "tier": null,
+      "parallel": true,
+      "title": "Create `specs/002-highbar-coordinator-pivot/readiness/`",
+      "explicit_deps": [],
+      "phase_deps": [],
+      "root_cause": []
+    },
+    {
+      "id": "T004",
+      "declared": "done",
+      "effective": "done",
+      "phase": 1,
+      "story": null,
+      "tier": null,
+      "parallel": true,
+      "title": "Record feature Tier (T1), affected layers",
+      "explicit_deps": [],
+      "phase_deps": [],
+      "root_cause": []
+    },
+    {
+      "id": "T005",
+      "declared": "done",
+      "effective": "done",
+      "phase": 2,
+      "story": null,
+      "tier": null,
+      "parallel": false,
+      "title": "Draft `Broker.Protocol.HighBarCoordinatorService.fsi`",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T004"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T006",
+      "declared": "done",
+      "effective": "done",
+      "phase": 2,
+      "story": null,
+      "tier": null,
+      "parallel": true,
+      "title": "Update `Broker.Protocol.WireConvert.fsi` per",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T004"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T007",
+      "declared": "done",
+      "effective": "done",
+      "phase": 2,
+      "story": null,
+      "tier": null,
+      "parallel": true,
+      "title": "Update `Broker.Protocol.BrokerState.fsi` per",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T004"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T008",
+      "declared": "done",
+      "effective": "done",
+      "phase": 2,
+      "story": null,
+      "tier": null,
+      "parallel": true,
+      "title": "Update `Broker.Core.Audit.fsi` and",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T004"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T009",
+      "declared": "done",
+      "effective": "done",
+      "phase": 2,
+      "story": null,
+      "tier": null,
+      "parallel": false,
+      "title": "Add a `ProtoPin` test under `tests/Broker.Contracts.Tests`",
+      "explicit_deps": [
+        "T002"
+      ],
+      "phase_deps": [
+        "T004"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T010",
+      "declared": "done",
+      "effective": "done",
+      "phase": 2,
+      "story": null,
+      "tier": null,
+      "parallel": false,
+      "title": "Update `scripts/prelude.fsx` to load the packed",
+      "explicit_deps": [
+        "T005",
+        "T006",
+        "T007",
+        "T008"
+      ],
+      "phase_deps": [
+        "T004"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T011",
+      "declared": "done",
+      "effective": "done",
+      "phase": 2,
+      "story": null,
+      "tier": null,
+      "parallel": true,
+      "title": "Seed a placeholder `Broker.Protocol.HighBarCoordinatorService.surface.txt`",
+      "explicit_deps": [
+        "T005"
+      ],
+      "phase_deps": [
+        "T004"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T012",
+      "declared": "done",
+      "effective": "done",
+      "phase": 2,
+      "story": null,
+      "tier": null,
+      "parallel": true,
+      "title": "Record unsupported-scope handling and failure",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T004"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T013",
+      "declared": "done",
+      "effective": "done",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": true,
+      "title": "Add Expecto tests for HighBar schema-version",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T012"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T014",
+      "declared": "done",
+      "effective": "done",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": true,
+      "title": "Add Expecto tests for",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T012"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T015",
+      "declared": "done",
+      "effective": "done",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": true,
+      "title": "Add Expecto tests for `BrokerState.noteHeartbeat`",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T012"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T016",
+      "declared": "done",
+      "effective": "done",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": true,
+      "title": "Add Expecto tests for `OwnerRule.FirstAttached`",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T012"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T017",
+      "declared": "done",
+      "effective": "done",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": true,
+      "title": "Add an integration test under",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T012"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T018",
+      "declared": "done",
+      "effective": "done",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": false,
+      "title": "Implement `Broker.Core.Audit.fsi/.fs` additions \u2014",
+      "explicit_deps": [
+        "T013",
+        "T015",
+        "T016"
+      ],
+      "phase_deps": [
+        "T012"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T019",
+      "declared": "done",
+      "effective": "done",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": false,
+      "title": "Implement `Broker.Protocol.BrokerState.fs` delta \u2014",
+      "explicit_deps": [
+        "T015",
+        "T016",
+        "T018"
+      ],
+      "phase_deps": [
+        "T012"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T020",
+      "declared": "done",
+      "effective": "done",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": false,
+      "title": "Implement `Broker.Protocol.WireConvert.fs` \u2014",
+      "explicit_deps": [
+        "T014",
+        "T019"
+      ],
+      "phase_deps": [
+        "T012"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T021",
+      "declared": "done",
+      "effective": "done",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": false,
+      "title": "Implement",
+      "explicit_deps": [
+        "T013",
+        "T017",
+        "T018",
+        "T019",
+        "T020"
+      ],
+      "phase_deps": [
+        "T012"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T022",
+      "declared": "done",
+      "effective": "done",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": false,
+      "title": "Add",
+      "explicit_deps": [
+        "T017",
+        "T021",
+        "T051",
+        "T052"
+      ],
+      "phase_deps": [
+        "T012"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T023",
+      "declared": "synthetic",
+      "effective": "synthetic",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": false,
+      "title": "[S] Drive synthetic-coordinator end-to-end CI evidence",
+      "explicit_deps": [
+        "T021",
+        "T022"
+      ],
+      "phase_deps": [
+        "T012"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T024",
+      "declared": "done",
+      "effective": "done",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": true,
+      "title": "Re-run SC-002 latency budget under",
+      "explicit_deps": [
+        "T022"
+      ],
+      "phase_deps": [
+        "T012"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T025",
+      "declared": "done",
+      "effective": "done",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": true,
+      "title": "Re-run SC-003 disconnect-recovery budget under",
+      "explicit_deps": [
+        "T022"
+      ],
+      "phase_deps": [
+        "T012"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T026",
+      "declared": "done",
+      "effective": "done",
+      "phase": 4,
+      "story": "US2",
+      "tier": null,
+      "parallel": true,
+      "title": "Add Expecto tests for",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T025"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T027",
+      "declared": "done",
+      "effective": "done",
+      "phase": 4,
+      "story": "US2",
+      "tier": null,
+      "parallel": true,
+      "title": "Add Expecto tests for",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T025"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T028",
+      "declared": "done",
+      "effective": "done",
+      "phase": 4,
+      "story": "US2",
+      "tier": null,
+      "parallel": true,
+      "title": "Add an integration test under",
+      "explicit_deps": [
+        "T022"
+      ],
+      "phase_deps": [
+        "T025"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T029",
+      "declared": "done",
+      "effective": "done",
+      "phase": 4,
+      "story": "US2",
+      "tier": null,
+      "parallel": true,
+      "title": "Add an Expecto test that the FR-010 backpressure",
+      "explicit_deps": [
+        "T022"
+      ],
+      "phase_deps": [
+        "T025"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T030",
+      "declared": "done",
+      "effective": "done",
+      "phase": 4,
+      "story": "US2",
+      "tier": null,
+      "parallel": false,
+      "title": "Implement",
+      "explicit_deps": [
+        "T026",
+        "T027"
+      ],
+      "phase_deps": [
+        "T025"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T031",
+      "declared": "done",
+      "effective": "done",
+      "phase": 4,
+      "story": "US2",
+      "tier": null,
+      "parallel": false,
+      "title": "Wire `Broker.Protocol.BackpressureGate` to",
+      "explicit_deps": [
+        "T028",
+        "T029",
+        "T030"
+      ],
+      "phase_deps": [
+        "T025"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T032",
+      "declared": "synthetic",
+      "effective": "synthetic",
+      "phase": 4,
+      "story": "US2",
+      "tier": null,
+      "parallel": false,
+      "title": "[S] Drive end-to-end command egress over",
+      "explicit_deps": [
+        "T031"
+      ],
+      "phase_deps": [
+        "T025"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T033",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 5,
+      "story": "US3",
+      "tier": null,
+      "parallel": false,
+      "title": "Operator walkthrough \u00a71 (cold-start, FR-001 / FR-002 /",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T032"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T034",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 5,
+      "story": "US3",
+      "tier": null,
+      "parallel": false,
+      "title": "Operator walkthrough \u00a72 (latency, SC-002) over \u2265500",
+      "explicit_deps": [
+        "T033"
+      ],
+      "phase_deps": [
+        "T032"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T035",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 5,
+      "story": "US3",
+      "tier": null,
+      "parallel": false,
+      "title": "Operator walkthrough \u00a74 (disconnect recovery, SC-003)",
+      "explicit_deps": [
+        "T033"
+      ],
+      "phase_deps": [
+        "T032"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T036",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 5,
+      "story": "US3",
+      "tier": null,
+      "parallel": false,
+      "title": "Operator walkthrough \u00a73 (dashboard load, SC-004)",
+      "explicit_deps": [
+        "T033"
+      ],
+      "phase_deps": [
+        "T032"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T037",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 5,
+      "story": "US3",
+      "tier": null,
+      "parallel": false,
+      "title": "Operator walkthrough \u2014 viz screenshot over an active",
+      "explicit_deps": [
+        "T033"
+      ],
+      "phase_deps": [
+        "T032"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T038",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 5,
+      "story": "US3",
+      "tier": null,
+      "parallel": false,
+      "title": "Update",
+      "explicit_deps": [
+        "T033",
+        "T034",
+        "T035",
+        "T036",
+        "T037",
+        "T053"
+      ],
+      "phase_deps": [
+        "T032"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T039",
+      "declared": "done",
+      "effective": "done",
+      "phase": 6,
+      "story": "US4",
+      "tier": null,
+      "parallel": true,
+      "title": "Delete `src/Broker.Contracts/proxylink.proto` and",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T038"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T040",
+      "declared": "done",
+      "effective": "done",
+      "phase": 6,
+      "story": "US4",
+      "tier": null,
+      "parallel": true,
+      "title": "Delete `src/Broker.Protocol/ProxyLinkService.fsi`",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T038"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T041",
+      "declared": "done",
+      "effective": "done",
+      "phase": 6,
+      "story": "US4",
+      "tier": null,
+      "parallel": false,
+      "title": "**Rebind** the four 001 integration files that import",
+      "explicit_deps": [
+        "T022"
+      ],
+      "phase_deps": [
+        "T038"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T042",
+      "declared": "done",
+      "effective": "done",
+      "phase": 6,
+      "story": "US4",
+      "tier": null,
+      "parallel": true,
+      "title": "Delete",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T038"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T043",
+      "declared": "done",
+      "effective": "done",
+      "phase": 6,
+      "story": "US4",
+      "tier": null,
+      "parallel": false,
+      "title": "Confirm `dotnet build` of the full solution is clean",
+      "explicit_deps": [
+        "T039",
+        "T040",
+        "T041"
+      ],
+      "phase_deps": [
+        "T038"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T044",
+      "declared": "done",
+      "effective": "done",
+      "phase": 6,
+      "story": "US4",
+      "tier": null,
+      "parallel": false,
+      "title": "Replace the placeholder",
+      "explicit_deps": [
+        "T021"
+      ],
+      "phase_deps": [
+        "T038"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T045",
+      "declared": "done",
+      "effective": "done",
+      "phase": 6,
+      "story": "US4",
+      "tier": null,
+      "parallel": false,
+      "title": "Run `dotnet test tests/SurfaceArea` \u2014 confirm green.",
+      "explicit_deps": [
+        "T039",
+        "T040",
+        "T041",
+        "T042",
+        "T043",
+        "T044"
+      ],
+      "phase_deps": [
+        "T038"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T046",
+      "declared": "done",
+      "effective": "done",
+      "phase": 7,
+      "story": null,
+      "tier": null,
+      "parallel": true,
+      "title": "Add `--print-schema-version` and",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T045"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T047",
+      "declared": "skipped",
+      "effective": "skipped",
+      "phase": 7,
+      "story": null,
+      "tier": null,
+      "parallel": true,
+      "title": "Surface coordinator status in `Broker.Tui.DashboardView`",
+      "explicit_deps": [
+        "T020"
+      ],
+      "phase_deps": [
+        "T045"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T048",
+      "declared": "done",
+      "effective": "done",
+      "phase": 7,
+      "story": null,
+      "tier": null,
+      "parallel": false,
+      "title": "Run the packed library through `scripts/prelude.fsx` and",
+      "explicit_deps": [
+        "T046",
+        "T047"
+      ],
+      "phase_deps": [
+        "T045"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T049",
+      "declared": "done",
+      "effective": "done",
+      "phase": 7,
+      "story": null,
+      "tier": null,
+      "parallel": false,
+      "title": "Run `.specify/extensions/evidence/scripts/bash/run-audit.sh",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T045"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T050",
+      "declared": "done",
+      "effective": "done",
+      "phase": 7,
+      "story": null,
+      "tier": null,
+      "parallel": false,
+      "title": "Run `.specify/extensions/evidence/scripts/bash/run-audit.sh`",
+      "explicit_deps": [
+        "T049"
+      ],
+      "phase_deps": [
+        "T045"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T051",
+      "declared": "done",
+      "effective": "done",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": true,
+      "title": "Add an integration test driving **two",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T012"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T052",
+      "declared": "done",
+      "effective": "done",
+      "phase": 3,
+      "story": "US1",
+      "tier": null,
+      "parallel": true,
+      "title": "Add an integration test for **scripting client",
+      "explicit_deps": [],
+      "phase_deps": [
+        "T012"
+      ],
+      "root_cause": []
+    },
+    {
+      "id": "T053",
+      "declared": "pending",
+      "effective": "pending",
+      "phase": 5,
+      "story": "US3",
+      "tier": null,
+      "parallel": false,
+      "title": "Operator walkthrough \u2014 host-mode lobby launch +",
+      "explicit_deps": [
+        "T033"
+      ],
+      "phase_deps": [
+        "T032"
+      ],
+      "root_cause": []
+    }
+  ]
+}

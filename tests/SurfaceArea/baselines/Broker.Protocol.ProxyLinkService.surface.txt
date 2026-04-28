@@ -1,7 +1,0 @@
-  F Broker.Protocol.ProxyLinkService.Service.attached : Int32
-  F Broker.Protocol.ProxyLinkService.Service.hub : Hub
-M Broker.Protocol.ProxyLinkService.create(hub:Hub) : Service
-M Broker.Protocol.ProxyLinkService.detach(service:Service, reason:String) : Void
-M Broker.Protocol.ProxyLinkService.isAttached(service:Service) : Boolean
-T Broker.Protocol.ProxyLinkService.Impl : class
-T Broker.Protocol.ProxyLinkService.Service : record

@@ -41,6 +41,14 @@ module Snapshot =
           ownerPlayerId: int
           pos: Vec2 }
 
+    /// HighBar `MapFeature` projected into the broker's snapshot
+    /// (data-model §1, research §2). Features are reclaim points, not
+    /// buildings; live alongside the broker's existing entity lists.
+    type Feature =
+        { id: uint32
+          kind: string
+          pos: Vec2 }
+
     type GameStateSnapshot =
         { sessionId: Guid
           tick: int64
@@ -48,6 +56,7 @@ module Snapshot =
           players: PlayerTelemetry list
           units: Unit list
           buildings: Building list
+          features: Feature list
           mapMeta: MapMeta option }
 
     /// True iff `next.tick > prev.tick` and they share `sessionId`.

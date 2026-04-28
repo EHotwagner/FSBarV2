@@ -18,8 +18,8 @@
     <Compile Include="WireConvert.fs" />
     <Compile Include="BrokerState.fsi" />
     <Compile Include="BrokerState.fs" />
-    <Compile Include="ProxyLinkService.fsi" />
-    <Compile Include="ProxyLinkService.fs" />
+    <Compile Include="HighBarCoordinatorService.fsi" />
+    <Compile Include="HighBarCoordinatorService.fs" />
     <Compile Include="ScriptingClientService.fsi" />
     <Compile Include="ScriptingClientService.fs" />
     <Compile Include="ServerHost.fsi" />

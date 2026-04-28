@@ -48,7 +48,7 @@ let private mkSubscribe (name: string) =
 let snapshotE2ETests =
     testList "Snapshot end-to-end (US1 acceptance #2 / FR-006)" [
 
-        testAsync "Subscribed client receives snapshots pushed by the synthetic proxy" {
+        testAsync "Subscribed client receives snapshots pushed by the synthetic coordinator" {
             let port = freePort()
             let handle = startServer port (System.Version(1, 0))
             try
@@ -62,18 +62,17 @@ let snapshotE2ETests =
 
                 use stateCall = scClient.SubscribeStateAsync(mkSubscribe "subscriber-1")
 
-                // 2. Attach a synthetic proxy.
-                let! proxy =
-                    SyntheticProxy.connect channel (System.Version(1, 0)) "test-proxy"
+                // 2. Attach a synthetic coordinator (replaces the retired
+                //    SyntheticProxy fixture for the new wire path).
+                let! coord =
+                    SyntheticCoordinator.connect channel "test-coord" "1.0.0"
                     |> Async.AwaitTask
-                use _ = proxy
+                use _ = coord
 
-                // 3. Push three snapshots with monotonic ticks.
-                for tick in [ 1L; 2L; 3L ] do
-                    do!
-                        proxy.PushSnapshotAsync (fun s ->
-                            s.Tick <- tick)
-                        |> Async.AwaitTask
+                // 3. Push three snapshots; SyntheticCoordinator auto-increments
+                //    the StateUpdate.Frame which becomes the broker's tick.
+                for _ in 1 .. 3 do
+                    do! coord.PushSnapshotAsync (fun _ -> ()) |> Async.AwaitTask
 
                 // 4. Read three snapshots from the subscriber stream.
                 let received = ResizeArray<int64>()
@@ -99,7 +98,7 @@ let snapshotE2ETests =
                 (handle :> IAsyncDisposable).DisposeAsync().AsTask().Wait()
         }
 
-        testAsync "Subscribed client receives SessionEnd when proxy gracefully ends (US1 acceptance #5 / FR-026)" {
+        testAsync "Subscribed client receives SessionEnd when coordinator gracefully ends (US1 acceptance #5 / FR-026)" {
             let port = freePort()
             let handle = startServer port (System.Version(1, 0))
             try
@@ -111,14 +110,16 @@ let snapshotE2ETests =
                     |> Async.AwaitTask
                 use stateCall = scClient.SubscribeStateAsync(mkSubscribe "watcher")
 
-                let! proxy =
-                    SyntheticProxy.connect channel (System.Version(1, 0)) "test-proxy"
+                let! coord =
+                    SyntheticCoordinator.connect channel "test-coord" "1.0.0"
                     |> Async.AwaitTask
-                use _ = proxy
+                use _ = coord
 
-                // Push one snapshot, then end the session gracefully.
-                do! proxy.PushSnapshotAsync (fun s -> s.Tick <- 1L) |> Async.AwaitTask
-                do! proxy.EndSessionAsync(SessionEnd.Types.Reason.OperatorTerminated) |> Async.AwaitTask
+                // Push one snapshot, then complete the PushState stream
+                // gracefully. The broker's Impl.PushState handler observes
+                // the end-of-stream and runs closeSession ProxyDisconnected.
+                do! coord.PushSnapshotAsync (fun _ -> ()) |> Async.AwaitTask
+                do! coord.CompleteAsync() |> Async.AwaitTask
 
                 // Read until we see SessionEnd or the stream closes.
                 use timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5.0))
@@ -134,10 +135,16 @@ let snapshotE2ETests =
                         let cur = stateCall.ResponseStream.Current
                         match cur.Body with
                         | ValueSome (StateMsg.Types.Body.SessionEnd se) ->
+                            // The coordinator wire reports graceful close as
+                            // ProxyDisconnected (research §4) — different from
+                            // the operator-terminated reason 001 used. The
+                            // FR-026 contract is "subscribers see SessionEnd
+                            // on graceful end"; the specific reason is
+                            // best-effort.
                             Expect.equal
                                 se.Reason
-                                SessionEnd.Types.Reason.OperatorTerminated
-                                "SessionEnd reason matches what the proxy sent"
+                                SessionEnd.Types.Reason.ProxyDisconnected
+                                "graceful coord close → ProxyDisconnected"
                             sawEnd <- true
                         | ValueSome (StateMsg.Types.Body.Snapshot _) -> ()    // earlier broadcast
                         | other -> failtestf "unexpected StateMsg body: %A" other

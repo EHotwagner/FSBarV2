@@ -15,6 +15,7 @@ let private mk (sid: Guid) (tick: int64) (mapMeta: MapMeta option) : GameStateSn
       players = []
       units = []
       buildings = []
+      features = []
       mapMeta = mapMeta }
 
 let private mapMeta : MapMeta =

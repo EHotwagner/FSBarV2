@@ -13,7 +13,16 @@ module Session =
         { attachedAt: DateTimeOffset
           protocolVersion: Version
           lastSnapshotAt: DateTimeOffset option
-          keepAliveIntervalMs: int }
+          keepAliveIntervalMs: int
+          // Coordinator-wire fields (feature 002, data-model §1.7). Empty
+          // strings / zero defaults are used by the ProxyLink path until
+          // it is removed in Phase 6; the HighBarCoordinatorService path
+          // populates them from HeartbeatRequest.
+          pluginId: string
+          schemaVersion: string
+          engineSha256: string
+          lastHeartbeatAt: DateTimeOffset
+          lastSeq: uint64 }
 
     type EndReason =
         | Victory
@@ -87,8 +96,6 @@ module Session =
         abstract Roster : unit -> ScriptingRoster.Roster
         abstract Slots : unit -> ParticipantSlot.ParticipantSlot list
         abstract BrokerVersion : unit -> Version
-        abstract OnProxyAttached : ProxyAiLink -> unit
-        abstract OnProxyDetached : reason:string -> unit
         abstract OnSnapshot : Snapshot.GameStateSnapshot -> unit
         abstract OnClientConnected : ScriptingRoster.ScriptingClient -> unit
         abstract OnClientDisconnected : id:ScriptingClientId * reason:string -> unit

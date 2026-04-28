@@ -1,8 +1,23 @@
-M Broker.Protocol.WireConvert.fromCoreCommand(command:Command) : Command
+  C Broker.Protocol.WireConvert.ApplyResult.Gap(lastSeq:UInt64, receivedSeq:UInt64)
+  C Broker.Protocol.WireConvert.ApplyResult.KeepAliveOnly()
+  C Broker.Protocol.WireConvert.ApplyResult.NewSnapshot(Item:GameStateSnapshot)
+  F Broker.Protocol.WireConvert.RunningView.economy : FSharpOption<ResourceVector>
+  F Broker.Protocol.WireConvert.RunningView.features : FSharpMap<UInt32,Feature>
+  F Broker.Protocol.WireConvert.RunningView.lastFrame : Int64
+  F Broker.Protocol.WireConvert.RunningView.lastSeq : UInt64
+  F Broker.Protocol.WireConvert.RunningView.mapMeta : FSharpOption<MapMeta>
+  F Broker.Protocol.WireConvert.RunningView.sessionId : Guid
+  F Broker.Protocol.WireConvert.RunningView.units : FSharpMap<UInt32,Unit>
+M Broker.Protocol.WireConvert.applyHighBarStateUpdate(update:StateUpdate, view:RunningView) : Tuple<RunningView,ApplyResult>
 M Broker.Protocol.WireConvert.fromCoreSnapshot(snapshot:GameStateSnapshot) : GameStateSnapshot
 M Broker.Protocol.WireConvert.fromCoreVersion(version:Version) : ProtocolVersion
+M Broker.Protocol.WireConvert.get_emptyRunningView() : RunningView
+M Broker.Protocol.WireConvert.lastSeq(view:RunningView) : UInt64
 M Broker.Protocol.WireConvert.toCoreCommand(msg:Command) : Command
-M Broker.Protocol.WireConvert.toCoreSnapshot(msg:GameStateSnapshot) : GameStateSnapshot
 M Broker.Protocol.WireConvert.toCoreVersion(msg:ProtocolVersion) : Version
 M Broker.Protocol.WireConvert.toCoreVersionOpt(msg:FSharpValueOption<ProtocolVersion>) : Version
 M Broker.Protocol.WireConvert.toReject(reason:RejectReason, commandId:FSharpOption<Guid>, brokerVersion:FSharpOption<Version>) : Reject
+M Broker.Protocol.WireConvert.tryFromCoreCommandToHighBar(command:Command, batchSeq:UInt64) : FSharpResult<CommandBatch,RejectReason>
+P Broker.Protocol.WireConvert.emptyRunningView : RunningView
+T Broker.Protocol.WireConvert.ApplyResult : union
+T Broker.Protocol.WireConvert.RunningView : record

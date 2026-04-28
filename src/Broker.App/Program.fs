@@ -26,6 +26,12 @@ module Program =
                 { ServerHost.defaultOptions with listenAddress = args.listen }
             let! handle = ServerHost.start opts brokerVersion auditEmit cts.Token
 
+            // FR-014 / SC-007: optional override of the expected
+            // coordinator schema version. Lets the operator force a
+            // mismatch for the schema-rejection quickstart flow.
+            args.expectedSchemaVersion
+            |> Option.iter (fun v -> BrokerState.setExpectedSchemaVersion v handle.Hub)
+
             // Optional 2D viz: probe at startup to populate the footer
             // status line; the actual SkiaViewer window only opens on `V`.
             let liveController : VizControllerImpl.LiveVizController option =
@@ -64,6 +70,16 @@ module Program =
             2
         | Ok args when args.showVersion ->
             Console.Out.WriteLine(sprintf "broker v%O" brokerVersion)
+            0
+        | Ok args when args.printSchemaVersion ->
+            // FR-014 pre-flight: print the broker's expected coordinator
+            // schema version so the operator can confirm alignment with
+            // the HighBarV3 plugin before launching BAR.
+            let v =
+                args.expectedSchemaVersion
+                |> Option.defaultValue
+                    Broker.Protocol.HighBarCoordinatorService.defaultConfig.expectedSchemaVersion
+            Console.Out.WriteLine(sprintf "broker schema version: %s" v)
             0
         | Ok args ->
             try

@@ -10,12 +10,14 @@
     <Compile Include="ScriptingClientEndToEndTests.fs" />
     <Compile Include="AuditLifecycleTests.fs" />
     <Compile Include="AdminElevationTests.fs" />
-    <Compile Include="SyntheticProxy.fs" />
+    <Compile Include="SyntheticCoordinator.fs" />
+    <Compile Include="CoordinatorE2ETests.fs" />
+    <Compile Include="CoordinatorCommandTests.fs" />
+    <Compile Include="CoordinatorLoadTests.fs" />
     <Compile Include="SnapshotE2ETests.fs" />
     <Compile Include="Sc003LatencyTests.fs" />
     <Compile Include="Sc005RecoveryTests.fs" />
     <Compile Include="GameProcessTests.fs" />
-    <Compile Include="DashboardLoadTests.fs" />
     <Compile Include="VizSceneBuilderTests.fs" />
     <Compile Include="VizHostProbeTests.fs" />
     <Compile Include="VizSc008Tests.fs" />

@@ -4,8 +4,12 @@
   F Broker.Core.Snapshot.Building.pos : Vec2
   F Broker.Core.Snapshot.EconomyStats.expenditure : ResourceVector
   F Broker.Core.Snapshot.EconomyStats.income : ResourceVector
+  F Broker.Core.Snapshot.Feature.id : UInt32
+  F Broker.Core.Snapshot.Feature.kind : String
+  F Broker.Core.Snapshot.Feature.pos : Vec2
   F Broker.Core.Snapshot.GameStateSnapshot.buildings : FSharpList<Building>
   F Broker.Core.Snapshot.GameStateSnapshot.capturedAt : DateTimeOffset
+  F Broker.Core.Snapshot.GameStateSnapshot.features : FSharpList<Feature>
   F Broker.Core.Snapshot.GameStateSnapshot.mapMeta : FSharpOption<MapMeta>
   F Broker.Core.Snapshot.GameStateSnapshot.players : FSharpList<PlayerTelemetry>
   F Broker.Core.Snapshot.GameStateSnapshot.sessionId : Guid
@@ -36,6 +40,7 @@ M Broker.Core.Snapshot.isStrictlyAfter(prev:GameStateSnapshot, next:GameStateSna
 M Broker.Core.Snapshot.mapMetaOnFirstOnly(prev:FSharpOption<GameStateSnapshot>, next:GameStateSnapshot) : GameStateSnapshot
 T Broker.Core.Snapshot.Building : record
 T Broker.Core.Snapshot.EconomyStats : record
+T Broker.Core.Snapshot.Feature : record
 T Broker.Core.Snapshot.GameStateSnapshot : record
 T Broker.Core.Snapshot.MapMeta : record
 T Broker.Core.Snapshot.PlayerTelemetry : record

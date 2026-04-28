@@ -1,0 +1,22 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Lib -> /home/developer/projects/FSBarV2/src/Lib/bin/Debug/net10.0/Lib.dll
+  Broker.Core -> /home/developer/projects/FSBarV2/src/Broker.Core/bin/Debug/net10.0/Broker.Core.dll
+  Broker.Contracts -> /home/developer/projects/FSBarV2/src/Broker.Contracts/bin/Debug/net10.0/Broker.Contracts.dll
+  Broker.Tui -> /home/developer/projects/FSBarV2/src/Broker.Tui/bin/Debug/net10.0/Broker.Tui.dll
+  Broker.Viz -> /home/developer/projects/FSBarV2/src/Broker.Viz/bin/Debug/net10.0/Broker.Viz.dll
+  Broker.Core.Tests -> /home/developer/projects/FSBarV2/tests/Broker.Core.Tests/bin/Debug/net10.0/Broker.Core.Tests.dll
+  Lib.Tests -> /home/developer/projects/FSBarV2/tests/Lib.Tests/bin/Debug/net10.0/Lib.Tests.dll
+  Broker.Protocol -> /home/developer/projects/FSBarV2/src/Broker.Protocol/bin/Debug/net10.0/Broker.Protocol.dll
+  Broker.Tui.Tests -> /home/developer/projects/FSBarV2/tests/Broker.Tui.Tests/bin/Debug/net10.0/Broker.Tui.Tests.dll
+  Broker.Contracts.Tests -> /home/developer/projects/FSBarV2/tests/Broker.Contracts.Tests/bin/Debug/net10.0/Broker.Contracts.Tests.dll
+  Broker.Protocol.Tests -> /home/developer/projects/FSBarV2/tests/Broker.Protocol.Tests/bin/Debug/net10.0/Broker.Protocol.Tests.dll
+  Broker.App -> /home/developer/projects/FSBarV2/src/Broker.App/bin/Debug/net10.0/broker.dll
+  Broker.Integration.Tests -> /home/developer/projects/FSBarV2/tests/Broker.Integration.Tests/bin/Debug/net10.0/Broker.Integration.Tests.dll
+  SurfaceArea -> /home/developer/projects/FSBarV2/tests/SurfaceArea/bin/Debug/net10.0/SurfaceArea.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:04.79

@@ -1,0 +1,14 @@
+{
+  "base_ref": null,
+  "blocking": [
+    {
+      "file": "specs/002-highbar-coordinator-pivot/tasks.md",
+      "line": 94,
+      "pattern": "not-implemented",
+      "severity": "block",
+      "reason": "Placeholder exception in production code",
+      "match": "stub `.fs` whose bodies are `failwith \"not implemented\"`. Register"
+    }
+  ],
+  "advisory": []
+}

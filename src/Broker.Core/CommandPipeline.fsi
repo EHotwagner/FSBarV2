@@ -39,6 +39,8 @@ module CommandPipeline =
         | SlotNotOwned of slot:int * actualOwner:ScriptingClientId option
         | NameInUse
         | VersionMismatch of broker:Version * peer:Version
+        | SchemaMismatch of expected:string * received:string
+        | NotOwner of attemptedPluginId:string * ownerPluginId:string
         | InvalidPayload of detail:string
 
     type EnqueueOutcome =

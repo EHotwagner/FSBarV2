@@ -56,7 +56,67 @@ module BrokerState =
     /// (FR-014, FR-026, FR-027).
     val closeSession : reason:Session.EndReason -> at:DateTimeOffset -> hub:Hub -> unit
 
-    val attachProxy : link:Session.ProxyAiLink -> hub:Hub -> Result<unit, string>
+    // Coordinator-wire seam (feature 002, public-fsi.md).
+
+    /// Owner-AI rule the coordinator service enforces (FR-011).
+    type OwnerRule =
+        | FirstAttached
+        | Pinned of pluginId:string
+
+    val expectedSchemaVersion : hub:Hub -> string
+    val setExpectedSchemaVersion : v:string -> hub:Hub -> unit
+    val ownerRule : hub:Hub -> OwnerRule
+    val setOwnerRule : rule:OwnerRule -> hub:Hub -> unit
+
+    /// Attach the coordinator-side ProxyAiLink. Equivalent to `attachProxy`
+    /// today; named differently so the wire-side code reads as
+    /// "attachCoordinator" rather than "attachProxy".
+    val attachCoordinator : link:Session.ProxyAiLink -> hub:Hub -> Result<unit, string>
+
+    /// Refresh `lastHeartbeatAt` and (if needed) capture the owner pluginId
+    /// per the active OwnerRule. Returns `Error NotOwner` when a non-owner
+    /// pluginId attempts a Heartbeat against a session whose owner is set.
+    val noteHeartbeat :
+        pluginId:string
+        -> at:DateTimeOffset
+        -> hub:Hub
+        -> Result<unit, CommandPipeline.RejectReason>
+
+    /// Surface a sequence-gap from PushState (FR-013). Emits a
+    /// CoordinatorStateGap audit event and updates the dashboard staleness
+    /// flag without rolling back the running view.
+    val noteStateGap :
+        pluginId:string
+        -> lastSeq:uint64
+        -> receivedSeq:uint64
+        -> at:DateTimeOffset
+        -> hub:Hub
+        -> unit
+
+    /// Lightweight liveness refresh — bumps `lastHeartbeatAt` without
+    /// taking the owner-rule path or emitting an audit event. Called per
+    /// inbound StateUpdate so the heartbeat watchdog does not false-trip
+    /// during steady streaming. The unary `Heartbeat` RPC keeps using
+    /// `noteHeartbeat` for the audit + owner check.
+    val refreshLiveness : at:DateTimeOffset -> hub:Hub -> unit
+
+    /// Most recent successful Heartbeat / accepted StateUpdate timestamp
+    /// for the live coordinator session; `MinValue` when no session is
+    /// attached. Read by the heartbeat watchdog for FR-008 detection.
+    val lastHeartbeatAt : hub:Hub -> DateTimeOffset
+
+    /// Plugin id captured by the first successful Heartbeat (`Some`
+    /// once a session is attached, `None` while Idle).
+    val activePluginId : hub:Hub -> string option
+
+    /// True when a `CoordinatorStateGap` was raised since the last clear
+    /// (FR-013 dashboard badge).
+    val telemetryGap : hub:Hub -> bool
+
+    /// Reset the gap badge — called by the dashboard renderer after the
+    /// stale tick has been shown.
+    val clearTelemetryGap : hub:Hub -> unit
+
     val applySnapshot : snapshot:Snapshot.GameStateSnapshot -> hub:Hub -> unit
 
     /// Push-based stream of the most recent in-process snapshots. Each
@@ -70,16 +130,17 @@ module BrokerState =
     /// Adjust active-session speed by `delta`. No-op when no session.
     val stepSpeed : delta:decimal -> hub:Hub -> Result<unit, string>
 
-    /// Channel of Core `Command`s the proxy bidi handler drains and
-    /// writes outbound (after converting via `WireConvert.fromCoreCommand`).
-    /// None when no proxy is currently attached.
-    val proxyOutbound : hub:Hub -> Channel<CommandPipeline.Command> option
+    /// Channel of Core `Command`s the coordinator's `OpenCommandChannel`
+    /// handler drains and writes outbound (after converting via
+    /// `WireConvert.tryFromCoreCommandToHighBar`). None when no coordinator
+    /// is currently attached.
+    val coordinatorCommandChannel : hub:Hub -> Channel<CommandPipeline.Command> option
 
-    /// Append a Core `Command` to the proxy outbound channel. No-op when
-    /// no proxy is attached (commands that have nowhere to go because the
-    /// proxy detached are dropped on the proxy side; the per-client queue
-    /// overflow already produced its `QUEUE_FULL` reject upstream).
-    val sendToProxy : command:CommandPipeline.Command -> hub:Hub -> unit
+    /// Append a Core `Command` to the coordinator outbound channel. No-op
+    /// when no coordinator is attached — commands with nowhere to go are
+    /// dropped silently because the per-client queue's `QUEUE_FULL` reject
+    /// already produced upstream feedback.
+    val sendToCoordinator : command:CommandPipeline.Command -> hub:Hub -> unit
 
     /// Register a new scripting client (FR-008). Fails with `NameInUse`
     /// when the name collides with another live client.

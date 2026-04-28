@@ -2,8 +2,6 @@
   A Broker.Core.Session.CoreFacade.Mode() : Mode
   A Broker.Core.Session.CoreFacade.OnClientConnected(:ScriptingClient) : Void
   A Broker.Core.Session.CoreFacade.OnClientDisconnected(id:ScriptingClientId, reason:String) : Void
-  A Broker.Core.Session.CoreFacade.OnProxyAttached(:ProxyAiLink) : Void
-  A Broker.Core.Session.CoreFacade.OnProxyDetached(reason:String) : Void
   A Broker.Core.Session.CoreFacade.OnSnapshot(:GameStateSnapshot) : Void
   A Broker.Core.Session.CoreFacade.OperatorEndSession() : FSharpResult<Unit,String>
   A Broker.Core.Session.CoreFacade.OperatorGrantAdmin(id:ScriptingClientId) : FSharpResult<Unit,String>
@@ -29,9 +27,14 @@
   F Broker.Core.Session.BrokerInfo.startedAt : DateTimeOffset
   F Broker.Core.Session.BrokerInfo.version : Version
   F Broker.Core.Session.ProxyAiLink.attachedAt : DateTimeOffset
+  F Broker.Core.Session.ProxyAiLink.engineSha256 : String
   F Broker.Core.Session.ProxyAiLink.keepAliveIntervalMs : Int32
+  F Broker.Core.Session.ProxyAiLink.lastHeartbeatAt : DateTimeOffset
+  F Broker.Core.Session.ProxyAiLink.lastSeq : UInt64
   F Broker.Core.Session.ProxyAiLink.lastSnapshotAt : FSharpOption<DateTimeOffset>
+  F Broker.Core.Session.ProxyAiLink.pluginId : String
   F Broker.Core.Session.ProxyAiLink.protocolVersion : Version
+  F Broker.Core.Session.ProxyAiLink.schemaVersion : String
   F Broker.Core.Session.Session.id : Guid
   F Broker.Core.Session.Session.mode : Mode
   F Broker.Core.Session.Session.pause : Pause

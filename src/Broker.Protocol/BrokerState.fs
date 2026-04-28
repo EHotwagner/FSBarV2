@@ -27,6 +27,10 @@ module BrokerState =
                     member _.Dispose() =
                         lock lock' (fun () -> observers.Remove observer |> ignore) }
 
+    type OwnerRule =
+        | FirstAttached
+        | Pinned of pluginId:string
+
     type Hub =
         { brokerVersion: Version
           commandQueueCapacity: int
@@ -35,7 +39,15 @@ module BrokerState =
           mutable mode: Mode.Mode
           mutable roster: ScriptingRoster.Roster
           mutable slots: ParticipantSlot.ParticipantSlot list
-          mutable proxyOutbound: Channel<CommandPipeline.Command> option
+          mutable coordinatorOutbound: Channel<CommandPipeline.Command> option
+          mutable expectedSchemaVersion: string
+          mutable ownerRule: OwnerRule
+          mutable telemetryGap: bool
+          // Live coordinator metadata that the heartbeat watchdog reads. Distinct
+          // from the immutable ProxyAiLink embedded in Session.proxy so the watchdog
+          // can refresh the timestamp without rebuilding the session record.
+          mutable activePluginId: string option
+          mutable lastHeartbeatAt: DateTimeOffset
           clients: System.Collections.Concurrent.ConcurrentDictionary<ScriptingClientId, ClientChannel>
           stateLock: obj
           snapshotBroadcaster: SnapshotBroadcaster }
@@ -52,7 +64,12 @@ module BrokerState =
           mode = Mode.Mode.Idle
           roster = ScriptingRoster.empty
           slots = []
-          proxyOutbound = None
+          coordinatorOutbound = None
+          expectedSchemaVersion = "1.0.0"
+          ownerRule = FirstAttached
+          telemetryGap = false
+          activePluginId = None
+          lastHeartbeatAt = DateTimeOffset.MinValue
           clients = System.Collections.Concurrent.ConcurrentDictionary<ScriptingClientId, ClientChannel>()
           stateLock = obj()
           snapshotBroadcaster = SnapshotBroadcaster() }
@@ -161,11 +178,14 @@ module BrokerState =
                 hub.session <- None
                 hub.mode <- Mode.Mode.Idle
                 hub.slots <- []
-                hub.proxyOutbound <- None
+                hub.coordinatorOutbound <- None
+                hub.activePluginId <- None
+                hub.lastHeartbeatAt <- DateTimeOffset.MinValue
+                hub.telemetryGap <- false
                 if prevMode <> hub.mode then
                     hub.auditEmitter (Audit.AuditEvent.ModeChanged (at, prevMode, hub.mode)))
 
-    let attachProxy (link: Session.ProxyAiLink) (hub: Hub) : Result<unit, string> =
+    let private attachLink (link: Session.ProxyAiLink) (hub: Hub) : Result<unit, string> =
         withLock hub (fun () ->
             // Auto-detect: if no host session is in flight, this is Guest.
             let s, mode =
@@ -180,10 +200,9 @@ module BrokerState =
                 let prevMode = hub.mode
                 hub.session <- Some newSession
                 hub.mode <- mode
-                hub.proxyOutbound <- Some (newProxyOutbound hub.commandQueueCapacity)
+                hub.coordinatorOutbound <- Some (newProxyOutbound hub.commandQueueCapacity)
                 if prevMode <> hub.mode then
                     hub.auditEmitter (Audit.AuditEvent.ModeChanged (link.attachedAt, prevMode, hub.mode))
-                hub.auditEmitter (Audit.AuditEvent.ProxyAttached (link.attachedAt, link.protocolVersion))
                 Ok ())
 
     let applySnapshot (snapshot: Snapshot.GameStateSnapshot) (hub: Hub) : unit =
@@ -230,12 +249,99 @@ module BrokerState =
                 hub.session <- Some (Session.stepSpeed delta s)
                 Ok ())
 
-    let proxyOutbound (hub: Hub) = hub.proxyOutbound
+    let coordinatorCommandChannel (hub: Hub) = hub.coordinatorOutbound
 
-    let sendToProxy (command: CommandPipeline.Command) (hub: Hub) : unit =
-        match hub.proxyOutbound with
+    let sendToCoordinator (command: CommandPipeline.Command) (hub: Hub) : unit =
+        match hub.coordinatorOutbound with
         | Some ch -> ch.Writer.TryWrite(command) |> ignore
         | None -> ()
+
+    let expectedSchemaVersion (hub: Hub) = hub.expectedSchemaVersion
+    let setExpectedSchemaVersion (v: string) (hub: Hub) : unit =
+        withLock hub (fun () -> hub.expectedSchemaVersion <- v)
+    let ownerRule (hub: Hub) = hub.ownerRule
+    let setOwnerRule (rule: OwnerRule) (hub: Hub) : unit =
+        withLock hub (fun () -> hub.ownerRule <- rule)
+
+    let attachCoordinator (link: Session.ProxyAiLink) (hub: Hub) : Result<unit, string> =
+        // Open the underlying session via the shared `attachLink` helper,
+        // then record coordinator-flavoured liveness metadata + audit.
+        match attachLink link hub with
+        | Error e -> Error e
+        | Ok () ->
+            withLock hub (fun () ->
+                hub.activePluginId <- Some link.pluginId
+                hub.lastHeartbeatAt <- link.attachedAt
+                hub.telemetryGap <- false)
+            hub.auditEmitter (
+                Audit.AuditEvent.CoordinatorAttached
+                    (link.attachedAt, link.pluginId, link.schemaVersion, link.engineSha256))
+            Ok ()
+
+    /// Owner rule enforcement (FR-011) + liveness refresh (FR-008).
+    let noteHeartbeat
+        (pluginId: string)
+        (at: DateTimeOffset)
+        (hub: Hub)
+        : Result<unit, CommandPipeline.RejectReason> =
+        withLock hub (fun () ->
+            // Owner check — ownerRule + activePluginId together decide.
+            let ownerCheck () =
+                match hub.ownerRule, hub.activePluginId with
+                | Pinned pinned, _ when pinned <> "" && pinned <> pluginId ->
+                    Error (CommandPipeline.NotOwner (pluginId, pinned))
+                | _, Some active when active <> "" && active <> pluginId ->
+                    Error (CommandPipeline.NotOwner (pluginId, active))
+                | _ -> Ok ()
+            match ownerCheck () with
+            | Error r ->
+                let owner =
+                    match r with
+                    | CommandPipeline.NotOwner (_, o) -> o
+                    | _ -> ""
+                hub.auditEmitter (Audit.AuditEvent.CoordinatorNonOwnerRejected (at, pluginId, owner))
+                Error r
+            | Ok () ->
+                // FirstAttached: capture the owner pluginId on the first
+                // heartbeat for an attached session.
+                if hub.activePluginId.IsNone && pluginId <> "" then
+                    hub.activePluginId <- Some pluginId
+                hub.lastHeartbeatAt <- at
+                hub.auditEmitter (Audit.AuditEvent.CoordinatorHeartbeat (at, pluginId, 0u))
+                Ok ())
+
+    let noteStateGap
+        (pluginId: string)
+        (lastSeq: uint64)
+        (receivedSeq: uint64)
+        (at: DateTimeOffset)
+        (hub: Hub)
+        : unit =
+        withLock hub (fun () ->
+            hub.telemetryGap <- true
+            hub.auditEmitter (Audit.AuditEvent.CoordinatorStateGap (at, pluginId, lastSeq, receivedSeq)))
+
+    /// Lightweight liveness refresh — bumps `lastHeartbeatAt` without
+    /// taking the owner-rule path or emitting an audit event. Called per
+    /// inbound StateUpdate to keep the watchdog from false-tripping
+    /// during steady streaming. The unary `Heartbeat` RPC keeps using
+    /// `noteHeartbeat` for the audit + owner check.
+    let refreshLiveness (at: DateTimeOffset) (hub: Hub) : unit =
+        // No lock — single-writer (the per-attach PushState handler) and
+        // a stale read here only delays the watchdog by one tick.
+        hub.lastHeartbeatAt <- at
+
+    /// Most recent Heartbeat / accepted StateUpdate timestamp for the live
+    /// coordinator session. `MinValue` when no session is attached. Read by
+    /// the heartbeat watchdog (HighBarCoordinatorService) for FR-008.
+    let lastHeartbeatAt (hub: Hub) : DateTimeOffset = hub.lastHeartbeatAt
+
+    let activePluginId (hub: Hub) : string option = hub.activePluginId
+
+    let telemetryGap (hub: Hub) : bool = hub.telemetryGap
+
+    let clearTelemetryGap (hub: Hub) : unit =
+        withLock hub (fun () -> hub.telemetryGap <- false)
 
     let registerClient
         (id: ScriptingClientId)
@@ -342,8 +448,6 @@ module BrokerState =
             member _.Roster() = hub.roster
             member _.Slots() = hub.slots
             member _.BrokerVersion() = hub.brokerVersion
-            member _.OnProxyAttached(link) = attachProxy link hub |> ignore
-            member _.OnProxyDetached(reason) = closeSession (Session.ProxyDisconnected reason) DateTimeOffset.UtcNow hub
             member _.OnSnapshot(snapshot) = applySnapshot snapshot hub
             member _.OnClientConnected(client) =
                 // Already handled by registerClient; this hook is for outside callers.
@@ -355,9 +459,51 @@ module BrokerState =
             member _.OperatorLaunchHost() =
                 launchHostSession DateTimeOffset.UtcNow hub
             member _.OperatorTogglePause() =
-                togglePause hub
+                // Toggle the broker-internal pause display, then dispatch the
+                // matching admin command to the coordinator (T031 / FR-005).
+                // The coordinator translates Admin.Pause/Resume into
+                // PauseTeamCommand on the wire (data-model §1.10).
+                let r = togglePause hub
+                match r with
+                | Ok () ->
+                    let nowDt = DateTimeOffset.UtcNow
+                    let paused =
+                        hub.session
+                        |> Option.map (fun s -> (Session.toReading nowDt s).pause = Session.Paused)
+                        |> Option.defaultValue false
+                    let kind =
+                        if paused then CommandPipeline.Admin CommandPipeline.Pause
+                        else CommandPipeline.Admin CommandPipeline.Resume
+                    let cmd : CommandPipeline.Command =
+                        { commandId = Guid.NewGuid()
+                          originatingClient = ScriptingClientId "operator"
+                          targetSlot = None
+                          kind = kind
+                          submittedAt = nowDt }
+                    sendToCoordinator cmd hub
+                | Error _ -> ()
+                r
             member _.OperatorStepSpeed(delta) =
-                stepSpeed delta hub
+                // SetSpeed has no AICommand mapping (research §3); the local
+                // dashboard speed indicator updates but the dispatch is
+                // rejected at the coordinator boundary by
+                // tryFromCoreCommandToHighBar. Audit the rejection so the
+                // operator can see why the engine did not respond.
+                let r = stepSpeed delta hub
+                match r with
+                | Ok () ->
+                    let cmd : CommandPipeline.Command =
+                        { commandId = Guid.NewGuid()
+                          originatingClient = ScriptingClientId "operator"
+                          targetSlot = None
+                          kind = CommandPipeline.Admin (CommandPipeline.SetSpeed delta)
+                          submittedAt = DateTimeOffset.UtcNow }
+                    // sendToCoordinator silently drops if no link; that's fine.
+                    // Audit emission for AdminNotAvailable happens at the
+                    // OpenCommandChannel drain in HighBarCoordinatorService.
+                    sendToCoordinator cmd hub
+                | Error _ -> ()
+                r
             member _.OperatorEndSession() =
                 closeSession Session.OperatorTerminated DateTimeOffset.UtcNow hub
                 Ok ()

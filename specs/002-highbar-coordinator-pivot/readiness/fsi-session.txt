@@ -1,0 +1,10 @@
+=== feature 002 surface walkthrough ===
+HeartbeatRequest plugin_id=ai-7 frame=1234 schema=1.0.0 engine=deadbeef
+RejectReason.SchemaMismatch  : SchemaMismatch ("1.0.0", "0.9.9-test")
+RejectReason.NotOwner         : NotOwner ("ai-2", "ai-1")
+Audit.CoordinatorAttached     : CoordinatorAttached (04/28/2026 12:52:35 +00:00, "ai-7", "1.0.0", "deadbeef")
+Audit.CoordinatorStateGap     : CoordinatorStateGap (04/28/2026 12:52:35 +00:00, "ai-7", 100UL, 105UL)
+Session.ProxyAiLink (002 shape) : pluginId=ai-7 schemaVersion=1.0.0 lastSeq=0
+HighBarCoordinatorService.defaultConfig : expectedSchemaVersion=1.0.0 heartbeatTimeoutMs=5000
+
+=== walkthrough OK — surface compiles + types instantiate ===

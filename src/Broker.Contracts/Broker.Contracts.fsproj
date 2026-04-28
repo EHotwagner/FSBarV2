@@ -7,13 +7,26 @@
     <Description>gRPC wire contracts (.proto) for the TUI gRPC Game Broker, with F# generated types.</Description>
     <!-- Generated proto code (Grpc-FSharp.Tools 0.2.0) predates nullable F#; disable for generated assembly. -->
     <Nullable>disable</Nullable>
+    <!-- HighBarV3 vendored proto set uses proto3 optional (added in protoc 3.15);
+         Grpc-FSharp.Tools 0.2.0 bundles protoc 3.13. Override with the system
+         protoc, which is new enough to handle the syntax. -->
+    <Protobuf_ProtocFullPath Condition="Exists('/usr/bin/protoc')">/usr/bin/protoc</Protobuf_ProtocFullPath>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- proxylink.proto and scriptingclient.proto import "common.proto"; ProtoRoot anchors that resolution. -->
+    <!-- scriptingclient.proto imports common.proto; ProtoRoot anchors that resolution. -->
     <Protobuf Include="common.proto" GrpcServices="None" ProtoRoot="." />
-    <Protobuf Include="proxylink.proto" GrpcServices="Both" ProtoRoot="." />
     <Protobuf Include="scriptingclient.proto" GrpcServices="Both" ProtoRoot="." />
+    <!-- HighBarV3 vendored proto set (pinned to upstream commit per HIGHBAR_PROTO_PIN.md).
+         Upstream uses proto3 optional fields; the protoc flag enables them.
+         Order matters: F# `namespace rec` is file-local, so cross-file references
+         require the referenced file to compile first. Topological order:
+           common → commands → events → state → coordinator. -->
+    <Protobuf Include="highbar/common.proto" GrpcServices="None" ProtoRoot="." AdditionalProtocArguments="--experimental_allow_proto3_optional" />
+    <Protobuf Include="highbar/commands.proto" GrpcServices="None" ProtoRoot="." AdditionalProtocArguments="--experimental_allow_proto3_optional" />
+    <Protobuf Include="highbar/events.proto" GrpcServices="None" ProtoRoot="." AdditionalProtocArguments="--experimental_allow_proto3_optional" />
+    <Protobuf Include="highbar/state.proto" GrpcServices="None" ProtoRoot="." AdditionalProtocArguments="--experimental_allow_proto3_optional" />
+    <Protobuf Include="highbar/coordinator.proto" GrpcServices="Both" ProtoRoot="." AdditionalProtocArguments="--experimental_allow_proto3_optional" />
   </ItemGroup>
 
   <ItemGroup>

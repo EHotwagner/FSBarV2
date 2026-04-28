@@ -72,8 +72,9 @@ module ServerHost =
         task {
             let endpoint = parseEndpoint options.listenAddress
             let hub = BrokerState.create brokerVersion options.commandQueueCapacity auditEmitter
-            let proxyService = ProxyLinkService.create hub
             let scriptingService = ScriptingClientService.create hub
+            let coordinatorService =
+                HighBarCoordinatorService.create hub HighBarCoordinatorService.defaultConfig
 
             let builder = WebApplication.CreateBuilder()
             // Disable the default startup banner / Kestrel chatter; the
@@ -81,16 +82,16 @@ module ServerHost =
             LoggingBuilderExtensions.ClearProviders(builder.Logging) |> ignore
             builder.Services.AddGrpc() |> ignore
             // Singleton Service wrappers — DI hands them to the Impl ctors.
-            builder.Services.AddSingleton<ProxyLinkService.Service>(proxyService) |> ignore
             builder.Services.AddSingleton<ScriptingClientService.Service>(scriptingService) |> ignore
+            builder.Services.AddSingleton<HighBarCoordinatorService.Service>(coordinatorService) |> ignore
             builder.Services.AddSingleton<BrokerState.Hub>(hub) |> ignore
             builder.WebHost.ConfigureKestrel(fun (opts: KestrelServerOptions) ->
                 opts.Listen(endpoint, fun listen ->
                     listen.Protocols <- HttpProtocols.Http2)) |> ignore
 
             let app = builder.Build()
-            app.MapGrpcService<ProxyLinkService.Impl>() |> ignore
             app.MapGrpcService<ScriptingClientService.Impl>() |> ignore
+            app.MapGrpcService<HighBarCoordinatorService.Impl>() |> ignore
 
             do! app.StartAsync(cancellationToken)
             let handle = RunningHandle(app, hub, options.listenAddress)

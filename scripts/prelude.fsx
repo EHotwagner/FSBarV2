@@ -21,8 +21,11 @@
 #r "nuget: Broker.Contracts"
 
 open Broker.Core
+open FSBarV2.Broker.Contracts
+open Highbar.V1   // feature 002: vendored HighBarV3 proto types
 
-printfn "prelude: Broker.Core loaded."
+printfn "prelude: Broker.Core + Broker.Contracts (incl. Highbar.V1) loaded."
 printfn "  Try:   Mode.transition Mode.Mode.Idle Mode.Mode.Guest"
 printfn "  Try:   ScriptingRoster.empty"
+printfn "  Try:   HeartbeatRequest(PluginId = \"ai-7\", SchemaVersion = \"1.0.0\")"
 printfn "  Note:  Phase-2 stubs throw 'not implemented'; that is expected."

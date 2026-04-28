@@ -28,6 +28,7 @@ let private mkSnapshot (sid: Guid) (tick: int64) (capturedAt: DateTimeOffset) : 
       players = []
       units = []
       buildings = []
+      features = []
       mapMeta = None }
 
 let private threshold = TimeSpan.FromSeconds 2.0
@@ -133,7 +134,12 @@ let dashboardTests =
                 { attachedAt = startedAt
                   protocolVersion = System.Version(1, 0)
                   lastSnapshotAt = None
-                  keepAliveIntervalMs = 2000 }
+                  keepAliveIntervalMs = 2000
+                  pluginId = ""
+                  schemaVersion = ""
+                  engineSha256 = ""
+                  lastHeartbeatAt = now
+                  lastSeq = 0UL }
             let session =
                 Session.newGuestSession startedAt
                 |> Session.attachProxy proxy
@@ -158,7 +164,12 @@ let dashboardTests =
                 { attachedAt = now.AddSeconds(-0.5)
                   protocolVersion = System.Version(1, 0)
                   lastSnapshotAt = None
-                  keepAliveIntervalMs = 2000 }
+                  keepAliveIntervalMs = 2000
+                  pluginId = ""
+                  schemaVersion = ""
+                  engineSha256 = ""
+                  lastHeartbeatAt = now
+                  lastSeq = 0UL }
             let session =
                 Session.newGuestSession (now.AddSeconds(-1.0))
                 |> Session.attachProxy proxy
@@ -172,7 +183,12 @@ let dashboardTests =
                 { attachedAt = now.AddSeconds(-5.0)
                   protocolVersion = System.Version(1, 0)
                   lastSnapshotAt = None
-                  keepAliveIntervalMs = 2000 }
+                  keepAliveIntervalMs = 2000
+                  pluginId = ""
+                  schemaVersion = ""
+                  engineSha256 = ""
+                  lastHeartbeatAt = now
+                  lastSeq = 0UL }
             let session =
                 Session.newGuestSession (now.AddSeconds(-10.0))
                 |> Session.attachProxy proxy
@@ -187,7 +203,12 @@ let dashboardTests =
                 { attachedAt = attachedAt
                   protocolVersion = System.Version(1, 0)
                   lastSnapshotAt = None
-                  keepAliveIntervalMs = 2000 }
+                  keepAliveIntervalMs = 2000
+                  pluginId = ""
+                  schemaVersion = ""
+                  engineSha256 = ""
+                  lastHeartbeatAt = now
+                  lastSeq = 0UL }
             let session =
                 Session.newGuestSession attachedAt
                 |> Session.attachProxy proxy
@@ -204,7 +225,12 @@ let dashboardTests =
                 { attachedAt = attachedAt
                   protocolVersion = System.Version(1, 0)
                   lastSnapshotAt = None
-                  keepAliveIntervalMs = 2000 }
+                  keepAliveIntervalMs = 2000
+                  pluginId = ""
+                  schemaVersion = ""
+                  engineSha256 = ""
+                  lastHeartbeatAt = now
+                  lastSeq = 0UL }
             let session =
                 Session.newGuestSession attachedAt
                 |> Session.attachProxy proxy
@@ -223,7 +249,12 @@ let dashboardTests =
                 { attachedAt = attachedAt
                   protocolVersion = System.Version(1, 0)
                   lastSnapshotAt = None
-                  keepAliveIntervalMs = 2000 }
+                  keepAliveIntervalMs = 2000
+                  pluginId = ""
+                  schemaVersion = ""
+                  engineSha256 = ""
+                  lastHeartbeatAt = now
+                  lastSeq = 0UL }
             let baseSession =
                 Session.newGuestSession attachedAt
                 |> Session.attachProxy proxy

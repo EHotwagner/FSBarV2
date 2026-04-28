@@ -1,0 +1,17 @@
+  F Broker.Protocol.HighBarCoordinatorService.Config.expectedSchemaVersion : String
+  F Broker.Protocol.HighBarCoordinatorService.Config.heartbeatTimeoutMs : Int32
+  F Broker.Protocol.HighBarCoordinatorService.Config.ownerRule : OwnerRule
+  F Broker.Protocol.HighBarCoordinatorService.Service.attached : Boolean
+  F Broker.Protocol.HighBarCoordinatorService.Service.config : Config
+  F Broker.Protocol.HighBarCoordinatorService.Service.hub : Hub
+  F Broker.Protocol.HighBarCoordinatorService.Service.nextBatchSeq : UInt64
+  F Broker.Protocol.HighBarCoordinatorService.Service.sessionCts : FSharpOption<CancellationTokenSource>
+  F Broker.Protocol.HighBarCoordinatorService.Service.stateLock : Object
+M Broker.Protocol.HighBarCoordinatorService.create(hub:Hub, config:Config) : Service
+M Broker.Protocol.HighBarCoordinatorService.detach(service:Service, reason:String) : Void
+M Broker.Protocol.HighBarCoordinatorService.get_defaultConfig() : Config
+M Broker.Protocol.HighBarCoordinatorService.isAttached(service:Service) : Boolean
+P Broker.Protocol.HighBarCoordinatorService.defaultConfig : Config
+T Broker.Protocol.HighBarCoordinatorService.Config : record
+T Broker.Protocol.HighBarCoordinatorService.Impl : class
+T Broker.Protocol.HighBarCoordinatorService.Service : record

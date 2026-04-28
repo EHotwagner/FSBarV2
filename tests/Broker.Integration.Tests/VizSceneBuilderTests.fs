@@ -74,6 +74,7 @@ let sceneBuilderTests =
                   players = []
                   units = []
                   buildings = []
+                  features = []
                   mapMeta = None }
             let s = SceneBuilder.summary (SceneBuilder.build snap)
             Expect.equal s.snapshotTick 42L "tick threaded through"
@@ -90,6 +91,7 @@ let sceneBuilderTests =
                     [ mkUnit 1u 0 100.0f 50.0f
                       mkUnit 2u 1 200.0f 80.0f ]
                   buildings = []
+                  features = []
                   mapMeta = None }
             let s = SceneBuilder.summary (SceneBuilder.build snap)
             let units =
@@ -116,6 +118,7 @@ let sceneBuilderTests =
                   players = [ mkPlayer 0 0 "alice" ]
                   units = [ mkUnit 1u 0 10.0f 10.0f ]
                   buildings = [ mkBuilding 100u 0 50.0f 75.0f ]
+                  features = []
                   mapMeta = None }
             let s = SceneBuilder.summary (SceneBuilder.build snap)
             let bs = s.entities |> List.filter (fun e -> e.isBuilding)
@@ -143,6 +146,7 @@ let sceneBuilderTests =
                       mkPlayer 3 0 "carol" ]
                   units = []
                   buildings = []
+                  features = []
                   mapMeta = None }
             let s = SceneBuilder.summary (SceneBuilder.build snap)
             Expect.equal (Map.count s.ownership) 3 "one entry per player"
@@ -161,6 +165,7 @@ let sceneBuilderTests =
                   players = []
                   units = []
                   buildings = []
+                  features = []
                   mapMeta = Some mapMeta }
             let s = SceneBuilder.summary (SceneBuilder.build snap)
             Expect.equal s.mapName (Some "Tabula") "map name preserved"
@@ -176,6 +181,7 @@ let sceneBuilderTests =
                   players = []
                   units = []
                   buildings = []
+                  features = []
                   mapMeta = None }
             let s = SceneBuilder.summary (SceneBuilder.build snap)
             Expect.isNone s.mapName "no map name"
@@ -194,6 +200,7 @@ let sceneBuilderTests =
                   players = [ mkPlayer 0 0 "alice" ]
                   units = [ mkUnit 1u 0 10.0f 10.0f; mkUnit 2u 0 20.0f 20.0f ]
                   buildings = [ mkBuilding 9u 0 30.0f 30.0f ]
+                  features = []
                   mapMeta = Some mapMeta }
             let scene = SceneBuilder.build snap
             let sk = SceneBuilder.toSkiaScene scene

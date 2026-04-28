@@ -1,43 +1,62 @@
+  C Broker.Protocol.BrokerState.OwnerRule.FirstAttached()
+  C Broker.Protocol.BrokerState.OwnerRule.Pinned(pluginId:String)
   F Broker.Protocol.BrokerState.ClientChannel.id : ScriptingClientId
   F Broker.Protocol.BrokerState.ClientChannel.queue : Queue
   F Broker.Protocol.BrokerState.ClientChannel.subscriber : FSharpOption<Channel`1>
+  F Broker.Protocol.BrokerState.Hub.activePluginId : FSharpOption<String>
   F Broker.Protocol.BrokerState.Hub.auditEmitter : FSharpFunc<AuditEvent,Unit>
   F Broker.Protocol.BrokerState.Hub.brokerVersion : Version
   F Broker.Protocol.BrokerState.Hub.clients : ConcurrentDictionary<ScriptingClientId,ClientChannel>
   F Broker.Protocol.BrokerState.Hub.commandQueueCapacity : Int32
+  F Broker.Protocol.BrokerState.Hub.coordinatorOutbound : FSharpOption<Channel`1>
+  F Broker.Protocol.BrokerState.Hub.expectedSchemaVersion : String
+  F Broker.Protocol.BrokerState.Hub.lastHeartbeatAt : DateTimeOffset
   F Broker.Protocol.BrokerState.Hub.mode : Mode
-  F Broker.Protocol.BrokerState.Hub.proxyOutbound : FSharpOption<Channel`1>
+  F Broker.Protocol.BrokerState.Hub.ownerRule : OwnerRule
   F Broker.Protocol.BrokerState.Hub.roster : Roster
   F Broker.Protocol.BrokerState.Hub.session : FSharpOption<Session>
   F Broker.Protocol.BrokerState.Hub.slots : FSharpList<ParticipantSlot>
   F Broker.Protocol.BrokerState.Hub.snapshotBroadcaster : SnapshotBroadcaster
   F Broker.Protocol.BrokerState.Hub.stateLock : Object
+  F Broker.Protocol.BrokerState.Hub.telemetryGap : Boolean
+M Broker.Protocol.BrokerState.activePluginId(hub:Hub) : FSharpOption<String>
 M Broker.Protocol.BrokerState.applySnapshot(snapshot:GameStateSnapshot, hub:Hub) : Void
 M Broker.Protocol.BrokerState.asCoreFacade(hub:Hub) : CoreFacade
-M Broker.Protocol.BrokerState.attachProxy(link:ProxyAiLink, hub:Hub) : FSharpResult<Unit,String>
+M Broker.Protocol.BrokerState.attachCoordinator(link:ProxyAiLink, hub:Hub) : FSharpResult<Unit,String>
 M Broker.Protocol.BrokerState.auditEmitter(hub:Hub) : FSharpFunc<AuditEvent,Unit>
 M Broker.Protocol.BrokerState.bindSlot(id:ScriptingClientId, slot:Int32, hub:Hub) : FSharpResult<Unit,SingleWriterError>
 M Broker.Protocol.BrokerState.brokerVersion(hub:Hub) : Version
+M Broker.Protocol.BrokerState.clearTelemetryGap(hub:Hub) : Void
 M Broker.Protocol.BrokerState.closeSession(reason:EndReason, at:DateTimeOffset, hub:Hub) : Void
+M Broker.Protocol.BrokerState.coordinatorCommandChannel(hub:Hub) : FSharpOption<Channel`1>
 M Broker.Protocol.BrokerState.create(brokerVersion:Version, commandQueueCapacity:Int32, auditEmitter:FSharpFunc<AuditEvent,Unit>) : Hub
+M Broker.Protocol.BrokerState.expectedSchemaVersion(hub:Hub) : String
 M Broker.Protocol.BrokerState.grantAdmin(id:ScriptingClientId, by:String, at:DateTimeOffset, hub:Hub) : FSharpResult<Unit,RosterError>
+M Broker.Protocol.BrokerState.lastHeartbeatAt(hub:Hub) : DateTimeOffset
 M Broker.Protocol.BrokerState.launchHostSession(at:DateTimeOffset, hub:Hub) : FSharpResult<Unit,String>
 M Broker.Protocol.BrokerState.liveClients(hub:Hub) : FSharpList<ClientChannel>
 M Broker.Protocol.BrokerState.mode(hub:Hub) : Mode
+M Broker.Protocol.BrokerState.noteHeartbeat(pluginId:String, at:DateTimeOffset, hub:Hub) : FSharpResult<Unit,RejectReason>
+M Broker.Protocol.BrokerState.noteStateGap(pluginId:String, lastSeq:UInt64, receivedSeq:UInt64, at:DateTimeOffset, hub:Hub) : Void
 M Broker.Protocol.BrokerState.openGuestSession(at:DateTimeOffset, hub:Hub) : FSharpResult<Unit,String>
 M Broker.Protocol.BrokerState.openHostSession(config:LobbyConfig, at:DateTimeOffset, hub:Hub) : FSharpResult<Unit,String>
-M Broker.Protocol.BrokerState.proxyOutbound(hub:Hub) : FSharpOption<Channel`1>
+M Broker.Protocol.BrokerState.ownerRule(hub:Hub) : OwnerRule
+M Broker.Protocol.BrokerState.refreshLiveness(at:DateTimeOffset, hub:Hub) : Void
 M Broker.Protocol.BrokerState.registerClient(id:ScriptingClientId, peerVersion:Version, at:DateTimeOffset, hub:Hub) : FSharpResult<ClientChannel,RosterError>
 M Broker.Protocol.BrokerState.revokeAdmin(id:ScriptingClientId, by:String, at:DateTimeOffset, hub:Hub) : FSharpResult<Unit,RosterError>
 M Broker.Protocol.BrokerState.roster(hub:Hub) : Roster
-M Broker.Protocol.BrokerState.sendToProxy(command:Command, hub:Hub) : Void
+M Broker.Protocol.BrokerState.sendToCoordinator(command:Command, hub:Hub) : Void
 M Broker.Protocol.BrokerState.session(hub:Hub) : FSharpOption<Session>
+M Broker.Protocol.BrokerState.setExpectedSchemaVersion(v:String, hub:Hub) : Void
+M Broker.Protocol.BrokerState.setOwnerRule(rule:OwnerRule, hub:Hub) : Void
 M Broker.Protocol.BrokerState.slots(hub:Hub) : FSharpList<ParticipantSlot>
 M Broker.Protocol.BrokerState.snapshots(hub:Hub) : IObservable<GameStateSnapshot>
 M Broker.Protocol.BrokerState.stepSpeed(delta:Decimal, hub:Hub) : FSharpResult<Unit,String>
+M Broker.Protocol.BrokerState.telemetryGap(hub:Hub) : Boolean
 M Broker.Protocol.BrokerState.togglePause(hub:Hub) : FSharpResult<Unit,String>
 M Broker.Protocol.BrokerState.tryGetClient(id:ScriptingClientId, hub:Hub) : FSharpOption<ClientChannel>
 M Broker.Protocol.BrokerState.unbindSlot(id:ScriptingClientId, slot:Int32, hub:Hub) : Void
 M Broker.Protocol.BrokerState.unregisterClient(id:ScriptingClientId, reason:String, at:DateTimeOffset, hub:Hub) : Void
 T Broker.Protocol.BrokerState.ClientChannel : record
 T Broker.Protocol.BrokerState.Hub : record
+T Broker.Protocol.BrokerState.OwnerRule : union

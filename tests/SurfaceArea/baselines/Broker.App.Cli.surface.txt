@@ -1,5 +1,7 @@
+  F Broker.App.Cli.Args.expectedSchemaVersion : FSharpOption<String>
   F Broker.App.Cli.Args.listen : String
   F Broker.App.Cli.Args.noViz : Boolean
+  F Broker.App.Cli.Args.printSchemaVersion : Boolean
   F Broker.App.Cli.Args.showVersion : Boolean
 M Broker.App.Cli.get_defaults() : Args
 M Broker.App.Cli.parse(argv:String[]) : FSharpResult<Args,String>

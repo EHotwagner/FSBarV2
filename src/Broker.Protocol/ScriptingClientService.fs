@@ -191,7 +191,7 @@ module ScriptingClientService =
                         | None ->
                             // Forward to proxy if attached; otherwise it stays
                             // in the per-client queue and the next drain picks it up.
-                            BrokerState.sendToProxy cmd hub
+                            BrokerState.sendToCoordinator cmd hub
                         do! response.WriteAsync(ack)
             with
             | :? OperationCanceledException -> ()

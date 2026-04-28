@@ -41,6 +41,11 @@ module Snapshot =
           ownerPlayerId: int
           pos: Vec2 }
 
+    type Feature =
+        { id: uint32
+          kind: string
+          pos: Vec2 }
+
     type GameStateSnapshot =
         { sessionId: Guid
           tick: int64
@@ -48,6 +53,7 @@ module Snapshot =
           players: PlayerTelemetry list
           units: Unit list
           buildings: Building list
+          features: Feature list
           mapMeta: MapMeta option }
 
     let isStrictlyAfter (prev: GameStateSnapshot) (next: GameStateSnapshot) : bool =

@@ -1,0 +1,8 @@
+  C Broker.Mvu.Adapters.ScriptingAdapter.ScriptingSendError.Failed(exn:Exception)
+  C Broker.Mvu.Adapters.ScriptingAdapter.ScriptingSendError.QueueFull(rejectedSeq:Int64)
+  F Broker.Mvu.Adapters.ScriptingAdapter.ScriptingAdapter.onClientDetached : FSharpFunc<ScriptingClientId,FSharpAsync`1>
+  F Broker.Mvu.Adapters.ScriptingAdapter.ScriptingAdapter.reject : FSharpFunc<ScriptingClientId,FSharpFunc`2>
+  F Broker.Mvu.Adapters.ScriptingAdapter.ScriptingAdapter.sampleDepth : FSharpFunc<ScriptingClientId,FSharpAsync`1>
+  F Broker.Mvu.Adapters.ScriptingAdapter.ScriptingAdapter.send : FSharpFunc<ScriptingClientId,FSharpFunc`2>
+T Broker.Mvu.Adapters.ScriptingAdapter.ScriptingAdapter : record
+T Broker.Mvu.Adapters.ScriptingAdapter.ScriptingSendError : union

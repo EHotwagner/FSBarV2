@@ -1,0 +1,3 @@
+  F Broker.Mvu.Adapters.CoordinatorAdapter.CoordinatorAdapter.isAttached : FSharpFunc<Unit,Boolean>
+  F Broker.Mvu.Adapters.CoordinatorAdapter.CoordinatorAdapter.send : FSharpFunc<Command,FSharpAsync`1>
+T Broker.Mvu.Adapters.CoordinatorAdapter.CoordinatorAdapter : record

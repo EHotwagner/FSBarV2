@@ -1,0 +1,30 @@
+  C Broker.Mvu.Cmd.Cmd`1.AuditCmd(Item:AuditEvent)
+  C Broker.Mvu.Cmd.Cmd`1.Batch(Item:FSharpList<Cmd`1>)
+  C Broker.Mvu.Cmd.Cmd`1.CancelTimer(Item:TimerId)
+  C Broker.Mvu.Cmd.Cmd`1.CompleteRpc(rpcId:RpcId, result:RpcResult)
+  C Broker.Mvu.Cmd.Cmd`1.CoordinatorOutbound(Item:Command)
+  C Broker.Mvu.Cmd.Cmd`1.EndSession(reason:EndReason)
+  C Broker.Mvu.Cmd.Cmd`1.NoOp()
+  C Broker.Mvu.Cmd.Cmd`1.Quit(exitCode:Int32)
+  C Broker.Mvu.Cmd.Cmd`1.ScheduleTick(schedule:TimerSchedule<msg>)
+  C Broker.Mvu.Cmd.Cmd`1.ScriptingOutbound(clientId:ScriptingClientId, msg:StateMsg)
+  C Broker.Mvu.Cmd.Cmd`1.ScriptingReject(clientId:ScriptingClientId, reason:RejectReason)
+  C Broker.Mvu.Cmd.Cmd`1.VizCmd(Item:VizOp)
+  C Broker.Mvu.Cmd.RpcId.RpcId(Item:Int64)
+  C Broker.Mvu.Cmd.RpcResult.Fault(exn:Exception)
+  C Broker.Mvu.Cmd.RpcResult.Success(payload:Object)
+  C Broker.Mvu.Cmd.TimerId.TimerId(Item:Int64)
+  C Broker.Mvu.Cmd.TimerSchedule`1.OneShot(timerId:TimerId, delayMs:Int32, msg:msg)
+  C Broker.Mvu.Cmd.TimerSchedule`1.Recurring(timerId:TimerId, intervalMs:Int32, msg:msg)
+  C Broker.Mvu.Cmd.VizOp.CloseWindow()
+  C Broker.Mvu.Cmd.VizOp.OpenWindow()
+  C Broker.Mvu.Cmd.VizOp.PushFrame(Item:GameStateSnapshot)
+  C Broker.Mvu.Cmd.VizOp.UpdateStatus(Item:String)
+M Broker.Mvu.Cmd.batch(cmds:FSharpList<Cmd`1>) : Cmd<msg>
+M Broker.Mvu.Cmd.none() : Cmd<msg>
+T Broker.Mvu.Cmd.Cmd`1 : union
+T Broker.Mvu.Cmd.RpcId : union
+T Broker.Mvu.Cmd.RpcResult : union
+T Broker.Mvu.Cmd.TimerId : union
+T Broker.Mvu.Cmd.TimerSchedule`1 : union
+T Broker.Mvu.Cmd.VizOp : union

@@ -1,0 +1,40 @@
+prelude: Broker.Core + Broker.Contracts (incl. Highbar.V1) + Broker.Mvu loaded.
+  Try:   Mode.transition Mode.Mode.Idle Mode.Mode.Guest
+  Try:   ScriptingRoster.empty
+  Try:   HeartbeatRequest(PluginId = "ai-7", SchemaVersion = "1.0.0")
+  Try:   Cmd.batch [ Cmd.NoOp; Cmd.NoOp ]
+  Try:   let cfg = Model.defaultConfig
+  Note:  Phase-2 stubs throw 'not implemented'; real bodies land in Phase 3+.
+
+── 1. Cmd construction ────────────────────────────────────
+Cmd.NoOp: NoOp
+Cmd.AuditCmd ...: built ok
+
+── 2. Cmd.batch + Cmd.none ────────────────────────────────
+Cmd.batch [NoOp; AuditCmd; NoOp; Quit 0] = Batch
+  [AuditCmd
+     (SessionEnded
+        (04/28/2026 16:28:04 +00:00, 81d87104-b8ce-4415-bd95-e5be5c674214,
+         OperatorTerminated)); Quit 0]
+Cmd.none = NoOp
+
+── 3. Msg construction ────────────────────────────────────
+Msg.TuiInput QuitRequested: TuiInput QuitRequested
+Msg.AdapterCallback (MailboxHighWater ...): built ok
+Msg.CmdFailure (AuditWriteFailed ...): built ok
+
+── 4. Model + BrokerConfig defaults ───────────────────────
+defaultConfig.tickIntervalMs = 100
+defaultConfig.mailboxHighWaterMark = 1024
+defaultConfig.vizEnabled = true
+Model.init ok: mode = Idle, viz = Closed
+  pendingRpcs.Count = 0, timers.Count = 0, queues.Count = 0
+
+── 5. Stubs throw the documented placeholder exception ────
+  ✓ Update.update throws: Broker.Mvu.Update.update not yet implemented (Phase 2 .fsi-only draft)
+  ✓ View.view throws: Broker.Mvu.View.view not yet implemented (Phase 2 .fsi-only draft)
+  ✓ TestRuntime.create throws: Broker.Mvu.TestRuntime.create not yet implemented (Phase 2 .fsi-only draft)
+
+── Foundation FSI exercise complete ───────────────────────
+Surface loads, data constructs, stubs report not-implemented.
+Phase 3 implements the real .fs bodies.

@@ -1,0 +1,59 @@
+  C Broker.Mvu.Model.OwnerRule.AcceptAny()
+  C Broker.Mvu.Model.OwnerRule.EnvVar(name:String)
+  C Broker.Mvu.Model.OwnerRule.FixedSkirmishAiId(Item:Int32)
+  C Broker.Mvu.Model.VizState.Active(openedAt:DateTimeOffset, statusLine:String)
+  C Broker.Mvu.Model.VizState.Closed()
+  C Broker.Mvu.Model.VizState.Disabled()
+  C Broker.Mvu.Model.VizState.Failed(failedAt:DateTimeOffset, reason:String)
+  F Broker.Mvu.Model.BrokerConfig.commandQueueCapacity : Int32
+  F Broker.Mvu.Model.BrokerConfig.expectedSchemaVersion : String
+  F Broker.Mvu.Model.BrokerConfig.heartbeatTimeoutMs : Int32
+  F Broker.Mvu.Model.BrokerConfig.listenAddress : String
+  F Broker.Mvu.Model.BrokerConfig.mailboxHighWaterCooldownMs : Int32
+  F Broker.Mvu.Model.BrokerConfig.mailboxHighWaterMark : Int32
+  F Broker.Mvu.Model.BrokerConfig.ownerRule : OwnerRule
+  F Broker.Mvu.Model.BrokerConfig.perClientQueueCapacity : Int32
+  F Broker.Mvu.Model.BrokerConfig.queueDepthSampleMs : Int32
+  F Broker.Mvu.Model.BrokerConfig.tickIntervalMs : Int32
+  F Broker.Mvu.Model.BrokerConfig.vizEnabled : Boolean
+  F Broker.Mvu.Model.Model.brokerInfo : BrokerInfo
+  F Broker.Mvu.Model.Model.config : BrokerConfig
+  F Broker.Mvu.Model.Model.coordinator : FSharpOption<ProxyAiLink>
+  F Broker.Mvu.Model.Model.elevation : FSharpOption<ScriptingClientId>
+  F Broker.Mvu.Model.Model.kickedClients : FSharpSet<ScriptingClientId>
+  F Broker.Mvu.Model.Model.lastMailboxAuditAt : FSharpOption<DateTimeOffset>
+  F Broker.Mvu.Model.Model.mailboxDepth : Int32
+  F Broker.Mvu.Model.Model.mailboxHighWater : Int32
+  F Broker.Mvu.Model.Model.mode : Mode
+  F Broker.Mvu.Model.Model.pendingLobby : FSharpOption<LobbyConfig>
+  F Broker.Mvu.Model.Model.pendingRpcs : FSharpMap<RpcId,RpcWaiter>
+  F Broker.Mvu.Model.Model.queues : FSharpMap<ScriptingClientId,QueueObservation>
+  F Broker.Mvu.Model.Model.roster : Roster
+  F Broker.Mvu.Model.Model.session : FSharpOption<Session>
+  F Broker.Mvu.Model.Model.slots : FSharpList<ParticipantSlot>
+  F Broker.Mvu.Model.Model.snapshot : FSharpOption<GameStateSnapshot>
+  F Broker.Mvu.Model.Model.startedAt : DateTimeOffset
+  F Broker.Mvu.Model.Model.timers : FSharpMap<TimerId,TimerHandle>
+  F Broker.Mvu.Model.Model.viz : VizState
+  F Broker.Mvu.Model.QueueObservation.depth : Int32
+  F Broker.Mvu.Model.QueueObservation.highWaterMark : Int32
+  F Broker.Mvu.Model.QueueObservation.lastOverflowAt : FSharpOption<DateTimeOffset>
+  F Broker.Mvu.Model.QueueObservation.lastSampledAt : DateTimeOffset
+  F Broker.Mvu.Model.QueueObservation.overflowCount : Int32
+  F Broker.Mvu.Model.RpcWaiter.issuedAt : DateTimeOffset
+  F Broker.Mvu.Model.RpcWaiter.operation : String
+  F Broker.Mvu.Model.RpcWaiter.tcs : Object
+  F Broker.Mvu.Model.TimerHandle.intervalMs : Int32
+  F Broker.Mvu.Model.TimerHandle.pendingMsg : Msg
+  F Broker.Mvu.Model.TimerHandle.scheduledAt : DateTimeOffset
+  F Broker.Mvu.Model.TimerHandle.timerId : TimerId
+M Broker.Mvu.Model.get_defaultConfig() : BrokerConfig
+M Broker.Mvu.Model.init(brokerInfo:BrokerInfo, config:BrokerConfig, startedAt:DateTimeOffset) : Model
+P Broker.Mvu.Model.defaultConfig : BrokerConfig
+T Broker.Mvu.Model.BrokerConfig : record
+T Broker.Mvu.Model.Model : record
+T Broker.Mvu.Model.OwnerRule : union
+T Broker.Mvu.Model.QueueObservation : record
+T Broker.Mvu.Model.RpcWaiter : record
+T Broker.Mvu.Model.TimerHandle : record
+T Broker.Mvu.Model.VizState : union

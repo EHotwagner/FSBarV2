@@ -1,0 +1,2 @@
+  F Broker.Mvu.Adapters.AuditAdapter.AuditAdapter.write : FSharpFunc<AuditEvent,FSharpAsync`1>
+T Broker.Mvu.Adapters.AuditAdapter.AuditAdapter : record

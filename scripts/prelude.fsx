@@ -19,13 +19,19 @@
 #i "nuget: file:///home/developer/.local/share/nuget-local/"
 #r "nuget: Broker.Core"
 #r "nuget: Broker.Contracts"
+#r "nuget: Broker.Mvu"
+#r "nuget: Spectre.Console"
 
 open Broker.Core
 open FSBarV2.Broker.Contracts
 open Highbar.V1   // feature 002: vendored HighBarV3 proto types
+open Broker.Mvu   // feature 003: Cmd, Msg, Model, Update, View, MvuRuntime, TestRuntime
+open Broker.Mvu.Adapters
 
-printfn "prelude: Broker.Core + Broker.Contracts (incl. Highbar.V1) loaded."
+printfn "prelude: Broker.Core + Broker.Contracts (incl. Highbar.V1) + Broker.Mvu loaded."
 printfn "  Try:   Mode.transition Mode.Mode.Idle Mode.Mode.Guest"
 printfn "  Try:   ScriptingRoster.empty"
 printfn "  Try:   HeartbeatRequest(PluginId = \"ai-7\", SchemaVersion = \"1.0.0\")"
-printfn "  Note:  Phase-2 stubs throw 'not implemented'; that is expected."
+printfn "  Try:   Cmd.batch [ Cmd.NoOp; Cmd.NoOp ]"
+printfn "  Try:   let cfg = Model.defaultConfig"
+printfn "  Note:  Phase-2 stubs throw 'not implemented'; real bodies land in Phase 3+."

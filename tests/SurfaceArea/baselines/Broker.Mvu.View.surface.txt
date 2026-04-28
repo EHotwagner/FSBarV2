@@ -1,0 +1,2 @@
+M Broker.Mvu.View.renderToString(width:Int32, height:Int32, model:Model) : String
+M Broker.Mvu.View.view(model:Model) : IRenderable

@@ -1,0 +1,7 @@
+M Broker.Mvu.Testing.Fixtures.syntheticGuestModel(clientCount:Int32, tick:Int64) : Model
+M Broker.Mvu.Testing.Fixtures.syntheticHostModelElevated(elevatedClient:ScriptingClientId) : Model
+M Broker.Mvu.Testing.Fixtures.syntheticIdleModel(startedAt:DateTimeOffset) : Model
+M Broker.Mvu.Testing.Fixtures.syntheticT029MsgSequence() : FSharpList<Msg>
+M Broker.Mvu.Testing.Fixtures.syntheticT037MsgSequence() : FSharpList<Msg>
+M Broker.Mvu.Testing.Fixtures.syntheticT042MsgSequence(clientCount:Int32, snapshotCount:Int32, unitsPerFrame:Int32) : FSharpList<Msg>
+M Broker.Mvu.Testing.Fixtures.syntheticT046MsgSequence(vizEnabled:Boolean) : FSharpList<Msg>

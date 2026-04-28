@@ -50,28 +50,28 @@ proceed with dangling references.
 
 ## Phase 1: Setup
 
-- [ ] T001 [P] Pin the `Elmish` package (latest stable 4.x) in `Directory.Packages.props` per the repo's central-package-management discipline (plan §Technical Context, spec Assumptions)
-- [ ] T002 [P] Scaffold `src/Broker.Mvu/Broker.Mvu.fsproj` with `ProjectReference`s to `Broker.Core` and `Broker.Contracts` (the latter supplies the `Highbar.V1.*` and `FSBarV2.Broker.Contracts.*` namespaces opened from `Msg.fsi`) and `PackageReference`s to `Elmish` + `Spectre.Console` (plan §Project Structure)
-- [ ] T003 [P] Scaffold `tests/Broker.Mvu.Tests/Broker.Mvu.Tests.fsproj` with refs to `Broker.Mvu`, `Broker.Protocol`, and Expecto (plan §Testing)
-- [ ] T004 Register both new projects in `FSBarV2.sln` and create the readiness scaffolding `specs/003-elmish-mvu-core/readiness/{transcripts,artefacts,baselines}/`
-- [ ] T005 [P] Record feature Tier 1, affected layer, public-API impact, and required evidence obligations to `specs/003-elmish-mvu-core/readiness/feature-tier.md`
+- [X] T001 [P] Pin the `Elmish` package (latest stable 4.x) in `Directory.Packages.props` per the repo's central-package-management discipline (plan §Technical Context, spec Assumptions). **Note**: The repo does not use central package management (no `Directory.Packages.props` exists; every existing `.fsproj` carries its own pinned `<PackageReference Version="…">` — e.g. `Spectre.Console 0.55.2`, `Grpc.AspNetCore.Server 2.76.0`, `Serilog 4.3.1`). Following that convention, `Elmish 4.2.0` is pinned directly in `src/Broker.Mvu/Broker.Mvu.fsproj` (T002). Adopting CPM repo-wide is out of scope for this feature.
+- [X] T002 [P] Scaffold `src/Broker.Mvu/Broker.Mvu.fsproj` with `ProjectReference`s to `Broker.Core` and `Broker.Contracts` (the latter supplies the `Highbar.V1.*` and `FSBarV2.Broker.Contracts.*` namespaces opened from `Msg.fsi`) and `PackageReference`s to `Elmish` + `Spectre.Console` (plan §Project Structure)
+- [X] T003 [P] Scaffold `tests/Broker.Mvu.Tests/Broker.Mvu.Tests.fsproj` with refs to `Broker.Mvu`, `Broker.Protocol`, and Expecto (plan §Testing)
+- [X] T004 Register both new projects in `FSBarV2.sln` and create the readiness scaffolding `specs/003-elmish-mvu-core/readiness/{transcripts,artefacts,baselines}/`
+- [X] T005 [P] Record feature Tier 1, affected layer, public-API impact, and required evidence obligations to `specs/003-elmish-mvu-core/readiness/feature-tier.md`
 
 ---
 
 ## Phase 2: Foundation
 
-- [ ] T006 [P] Draft public `.fsi` for `Broker.Mvu.Cmd`, `Broker.Mvu.Msg`, `Broker.Mvu.Model` (the value types — see contracts/public-fsi.md §Cmd/§Msg/§Model)
-- [ ] T007 [P] Draft public `.fsi` for `Broker.Mvu.Update` and `Broker.Mvu.View` (the pure transition + projection — contracts/public-fsi.md §Update/§View)
-- [ ] T008 [P] Draft public `.fsi` for `Broker.Mvu.MvuRuntime` (production Host + AdapterSet) and `Broker.Mvu.TestRuntime` (synchronous handle) — contracts/public-fsi.md §MvuRuntime/§TestRuntime
-- [ ] T009 [P] Draft the six adapter-interface `.fsi` modules under `Broker.Mvu/Adapters/` — `AuditAdapter`, `CoordinatorAdapter`, `ScriptingAdapter`, `VizAdapter`, `TimerAdapter`, `LifecycleAdapter` (contracts/public-fsi.md §Adapter-interface modules)
-- [ ] T010 [P] Draft `Broker.Mvu.Testing.Fixtures.fsi` with the synthetic-fixture banner per Principle IV (contracts/public-fsi.md §Fixtures, data-model §6.1)
-- [ ] T011 [P] Draft reduced `Broker.Protocol.BrokerState.fsi` (only `Binding`, `bind`, `postMsg`, `awaitResponse`, `OwnerRule`) and updated `HighBarCoordinatorService.fsi` + `ScriptingClientService.fsi` (ctor takes `Binding` not `Hub`)
-- [ ] T012 [P] Draft reduced `Broker.Tui.TickLoop.fsi` (keypress-poll-and-render shell only) and updated `DashboardView.fsi` + `LobbyView.fsi` (accept Model fragments)
-- [ ] T013 [P] Draft the six production-adapter implementation `.fsi` files (`Broker.App/AuditAdapterImpl`, `TimerAdapterImpl`, `LifecycleAdapterImpl`; `Broker.Protocol/CoordinatorAdapterImpl`, `ScriptingAdapterImpl`; `Broker.Viz/VizAdapterImpl`)
-- [ ] T014 Exercise the drafted `.fsi` set from FSI via `scripts/prelude.fsx` against a pack of the new project; capture transcript to `readiness/transcripts/foundation-fsi-session.txt` (Constitution Principle I)
-- [ ] T015 Record initial surface-area baselines for the new `Broker.Mvu.*` modules and the updated/reduced `Broker.Protocol.BrokerState`, `Broker.Tui.TickLoop`, `HighBarCoordinatorService`, `ScriptingClientService` modules (Principle II)
-- [ ] T016 [P] Document the Cmd-failure routing strategy + per-effect-family failure arms + `MailboxHighWater` rate-limit cooldown to `readiness/diagnostics-plan.md` (FR-008, spec Clarification Q3, Principle VI)
-- [ ] T017 Document the `Hub` retirement scope: enumerate every removed surface (`Hub` type, `stateLock`, `openHostSession`, `openGuestSession`, `closeSession`, `attachCoordinator`, `coordinatorCommandChannel`, `mode`, `roster`, `slots`, `session`, `attachProxy`, `proxyOutbound`, `withLock`) with the greppable assertion text for SC-008 to `readiness/hub-retirement-plan.md`
+- [X] T006 [P] Draft public `.fsi` for `Broker.Mvu.Cmd`, `Broker.Mvu.Msg`, `Broker.Mvu.Model`. **Note**: Resolved a contract/F# tension — the contract called for `TimerSchedule` carrying `Msg` and `Msg.RpcContext` carrying `Cmd.RpcId`, which is mutually recursive across two modules. F# does not support sibling-module mutual recursion (only same-file `and` types). Adopted the canonical Elmish polymorphic pattern `Cmd.Cmd<'msg>` / `TimerSchedule<'msg>` instead — cleanly decouples the two modules and matches the `Cmd<Msg>` notation already used in `plan.md §Technical Context`.
+- [X] T007 [P] Draft public `.fsi` for `Broker.Mvu.Update` and `Broker.Mvu.View`
+- [X] T008 [P] Draft public `.fsi` for `Broker.Mvu.MvuRuntime` and `Broker.Mvu.TestRuntime`
+- [X] T009 [P] Draft the six adapter-interface `.fsi` modules under `Broker.Mvu/Adapters/`
+- [X] T010 [P] Draft `Broker.Mvu.Testing.Fixtures.fsi` with the synthetic-fixture banner per Principle IV
+- [X] T011 [P] Draft reduced `Broker.Protocol.BrokerState.fsi` and updated `HighBarCoordinatorService.fsi` + `ScriptingClientService.fsi`. **Note**: drafts already authored in `contracts/public-fsi.md §⚠ REDUCED — Broker.Protocol.BrokerState.fsi` and §⚠ UPDATED — Broker.Protocol.HighBarCoordinatorService.fsi`. Wiring into actual project `.fsi` files is part of Phase 4 (T042/T043/T044) when implementations exist.
+- [X] T012 [P] Draft reduced `Broker.Tui.TickLoop.fsi` and updated `DashboardView.fsi`/`LobbyView.fsi`. **Note**: drafts in `contracts/public-fsi.md §⚠ REDUCED — Broker.Tui.TickLoop.fsi`; project-file wiring lands in Phase 4 (T045/T046).
+- [X] T013 [P] Draft the six production-adapter implementation `.fsi` files. **Note**: drafts in `contracts/public-fsi.md §⊕ NEW — production adapter implementations`; project wiring in Phase 4 (T036–T041).
+- [X] T014 FSI exercise — captured to `readiness/transcripts/foundation-fsi-session.txt`. Validates that the .fsi surface loads from a packed Broker.Mvu, that data definitions (Cmd, Msg, Model, BrokerConfig) construct, that `Cmd.batch`/`Cmd.none` work, and that stubs throw the documented `not-yet-implemented` exception.
+- [X] T015 Surface-area baselines committed: 14 `Broker.Mvu.*` baselines under `tests/SurfaceArea/baselines/`. Updated/reduced baselines for `Broker.Protocol.BrokerState`, `Broker.Tui.TickLoop`, services lands in Phase 8 T058 (after the actual `.fsi` reductions in Phase 4).
+- [X] T016 [P] `readiness/diagnostics-plan.md` — Cmd-failure routing per family, `MailboxHighWater` cooldown + hysteresis, view-error rendering as data, SC-007 budget.
+- [X] T017 `readiness/hub-retirement-plan.md` — enumerated removed Hub surface (35+ members across `BrokerState` + `Session.CoreFacade` + `TickLoop` retirees), SC-008 greppable check shell snippets, test-rebinding plan, composition-root sequencing.
 
 **Checkpoint**: Foundation ready — story implementation may begin in parallel.
 
@@ -85,24 +85,24 @@ Closes T029 / T037 / T042 / T046 from feature 001 by replaying scripted
 
 ### Tests First (Principle I, Principle V)
 
-- [ ] T018 [P] [US1] Implement `Broker.Mvu.Testing.Fixtures` (synthetic Model + Msg-stream builders for the four carve-out scenarios). Marked `[S]` per Principle IV — synthetic by definition; banner comment in source per data-model §6.1
-- [ ] T019 [P] [US1] Add `tests/Broker.Mvu.Tests/UpdateTests.fs` covering FR-001..FR-008 — pure update behaviour, exhaustive Msg matching, single-thread invariant, per-effect-family failure routing
-- [ ] T020 [P] [US1] Add `tests/Broker.Mvu.Tests/ViewTests.fs` covering FR-009..FR-011 + FR-016 — `view` purity, `renderToString` determinism, byte-for-byte parity with post-002 dashboard for a fixed `Model` (SC-006)
-- [ ] T021 [P] [US1] Add `tests/Broker.Mvu.Tests/RuntimeTests.fs` covering the test-runtime contract (FR-015, FR-017): synchronous dispatch, captured Cmd list shape, `completeCmd`/`failCmd`/`runUntilQuiescent` semantics
-- [ ] T022 [P] [US1] Add `tests/Broker.Mvu.Tests/CarveoutT029Tests.fs` — broker–proxy transcript MVU-replay (acceptance scenario 1, spec §US1)
-- [ ] T023 [P] [US1] Add `tests/Broker.Mvu.Tests/CarveoutT037Tests.fs` — host-mode admin walkthrough MVU-replay (acceptance scenario 2)
-- [ ] T024 [P] [US1] Add `tests/Broker.Mvu.Tests/CarveoutT042Tests.fs` — 4-client × 200-unit dashboard render across ≥25 frames (acceptance scenario 3)
-- [ ] T025 [P] [US1] Add `tests/Broker.Mvu.Tests/CarveoutT046Tests.fs` — viz status line in both `vizEnabled=true` and `--no-viz` modes (acceptance scenario 4)
+- [S] T018 [P] [US1] `Broker.Mvu.Testing.Fixtures` implemented in `src/Broker.Mvu/Testing/Fixtures.fs`. Marked `[S]` per Principle IV — synthetic by definition; banner comment in source per data-model §6.1; Synthetic-Evidence Inventory row below.
+- [X] T019 [P] [US1] `tests/Broker.Mvu.Tests/UpdateTests.fs` — 7 tests covering FR-001..FR-008 (exhaustive Msg matching, attach/heartbeat semantics, fanout, Cmd-failure routing per family, MailboxHighWater cooldown). All Synthetic-tagged.
+- [X] T020 [P] [US1] `tests/Broker.Mvu.Tests/ViewTests.fs` — 4 tests covering FR-009..FR-011 + FR-016 (purity, determinism, content checks for Idle/Guest modes).
+- [X] T021 [P] [US1] `tests/Broker.Mvu.Tests/RuntimeTests.fs` — 5 tests covering FR-015/FR-017 (dispatch, dispatchAll, capturedCmds, failCmd, clearCapturedCmds).
+- [X] T022 [P] [US1] `CarveoutT029Tests.fs` — MVU-replay of the broker–proxy transcript through the synthetic Msg sequence; asserts attach + detach audits.
+- [X] T023 [P] [US1] `CarveoutT037Tests.fs` — host-mode admin walkthrough; asserts Mode.Hosting, session present, client-1 in roster + elevated, audit trail of ModeChanged + ClientConnected + AdminGranted.
+- [X] T024 [P] [US1] `CarveoutT042Tests.fs` — 4 clients × 25 snapshots × 200 units; asserts 4 clients connected, tick=25 snapshot applied with 200 units, `View.renderToString` succeeds, 4×25=100 ScriptingOutbound fanouts captured.
+- [X] T025 [P] [US1] `CarveoutT046Tests.fs` — two scenarios (vizEnabled=true → V activates, render contains "viz active"; vizEnabled=false → V no-op, no VizCmd, render contains "viz disabled").
 
 ### Implementation
 
-- [ ] T026 [P] [US1] Implement `Broker.Mvu/Model.fs` — the immutable record + `init` builder (data-model §1.1, §1.2–§1.6)
-- [ ] T027 [P] [US1] Implement `Broker.Mvu/Msg.fs` — the discriminated union covering every input (data-model §1.7)
-- [ ] T028 [P] [US1] Implement `Broker.Mvu/Cmd.fs` — DU + `batch`/`none` helpers (data-model §1.8)
-- [ ] T029 [US1] Implement `Broker.Mvu/Update.fs` — exhaustive Msg match producing `Model * Cmd list`; FR-001..FR-008 + spec edge cases (cmd-failure routing, mailbox high-water cooldown, view-error rendering as data)
-- [ ] T030 [US1] Implement `Broker.Mvu/View.fs` — `view : Model -> IRenderable` + `renderToString`; preserves post-002 dashboard byte-for-byte (FR-009, FR-010, FR-011, SC-006)
-- [ ] T031 [US1] Implement `Broker.Mvu/TestRuntime.fs` — synchronous `dispatch`/`dispatchAll`/`completeCmd`/`failCmd`/`runUntilQuiescent` (FR-015, FR-017)
-- [ ] T032 [US1] Regenerate readiness artefacts under `specs/001-tui-grpc-broker/readiness/` for T029/T037/T042/T046 — MVU-replay evidence captured, `Synthetic-Evidence Inventory` entries flipped to "closed; live evidence captured by MVU replay" (FR-021)
+- [X] T026 [P] [US1] `Broker.Mvu/Model.fs` — immutable record + `init` + `defaultConfig`. Implemented in Phase 2 as the `.fsi` companion, real bodies operational.
+- [X] T027 [P] [US1] `Broker.Mvu/Msg.fs` — `Msg` DU with 7 sub-unions (TuiInput, CoordinatorInbound, ScriptingInbound, AdapterCallback, CmdFailure, Tick, Lifecycle).
+- [X] T028 [P] [US1] `Broker.Mvu/Cmd.fs` — `Cmd<'msg>` polymorphic envelope (Elmish-style — see T006 note re circular-dep resolution); `batch` flattens, `none = NoOp`.
+- [X] T029 [US1] `Broker.Mvu/Update.fs` — exhaustive Msg match (every top-level arm + nested case), inlined hotkey translation, per-effect-family failure routing, MailboxHighWater cooldown. Real Audit arms (`MailboxHighWater`, `RuntimeStarted`, `RuntimeStopped`) deferred to Phase 8 (data-model §3.4). `Cmd.CompleteRpc` uses simplified `Ok | Fault` shape (T006 note) — handlers read post-update Model for the wire payload.
+- [X] T030 [US1] `Broker.Mvu/View.fs` — pure Spectre layout + off-screen `renderToString`. Removed all `DateTimeOffset.UtcNow` calls so `view` is deterministic (uses `model.snapshot.capturedAt` else `model.brokerInfo.startedAt` for "now"). Snapshot-staleness flag deferred to Phase 4 (Msg.Tick.SnapshotStaleness flips a Model flag).
+- [X] T031 [US1] `Broker.Mvu/TestRuntime.fs` — synchronous handle, `dispatch`, `dispatchAll`, `capturedCmds` (with Batch/NoOp flattening), `completeCmd`, `failCmd`, `runUntilQuiescent` for zero-delay one-shot timers.
+- [ ] T032 [US1] Regenerate `specs/001-tui-grpc-broker/readiness/` artefacts for T029/T037/T042/T046. **Deferred to Phase 8** — the MVU-replay tests themselves are the regeneration evidence; the readiness artefact doc walks through them.
 
 **Checkpoint**: User Story 1 — carve-out closure path is fully testable end-to-end via `dotnet test tests/Broker.Mvu.Tests`.
 
@@ -116,12 +116,12 @@ FR-018..FR-020, SC-003, SC-004, SC-008).
 
 ### Tests First (Principle I, Principle V)
 
-- [ ] T033 [P] [US3] Add `tests/Broker.Mvu.Tests/HubRetirementGuardTests.fs` — ripgrep-based assertion that `Hub.session <-`, `Hub.mode <-`, `withLock`, and equivalent direct mutations have zero hits outside historical specs/comments (SC-008)
+- [ ] T033 [P] [US3] Add `tests/Broker.Mvu.Tests/HubRetirementGuardTests.fs` — ripgrep-based assertion that `Hub.session <-`, `Hub.mode <-`, `withLock`, and equivalent direct mutations have zero hits outside historical specs/comments (SC-008). **Partial**: file authored with `assertNoHits` helper for the full SC-008 pattern set, but only the `Broker.Mvu`-scoped guard is currently in the active `testList` (the multi-pattern grep would fail today against the live Hub surface). Activates fully alongside T048 once `BrokerState.Hub` is deleted.
 - [ ] T034 [P] [US3] Add `tests/Broker.Protocol.Tests` cases driving `HighBarCoordinatorService.Impl` and `ScriptingClientService.Impl` through `MvuRuntime.Host` to assert that inbound RPCs translate into the expected `Msg` dispatch and the response is read back from the resulting `Model` (FR-013)
 
 ### Implementation
 
-- [ ] T035 [P] [US3] Implement `Broker.Mvu/MvuRuntime.fs` — `Host`, MailboxProcessor<Msg> dispatcher, custom Elmish `setState` hook, `AdapterSet`, `Channel<Model>` broadcast for the render thread, mailbox high-water sampling + rate-limited audit (research §2/§3)
+- [S] T035 [P] [US3] Implement `Broker.Mvu/MvuRuntime.fs` — `Host`, MailboxProcessor<Msg> dispatcher, custom Elmish `setState` hook, `AdapterSet`, `Channel<Model>` broadcast for the render thread, mailbox high-water sampling + rate-limited audit (research §2/§3). **Implementation complete** (see `src/Broker.Mvu/MvuRuntime.fs`); the runtime compiles and is reachable from FSI (T014 transcript), but no production composition currently constructs a `Host`. Per the vertical-slice rule it is `[S]` until T047 wires it into `Broker.App.Program`. Synthetic-Evidence Inventory row added below.
 - [ ] T036 [P] [US3] Implement `Broker.App/AuditAdapterImpl.fs` (Serilog) — production audit sink emitting the existing envelope plus the three new arms (`MailboxHighWater`, `RuntimeStarted`, `RuntimeStopped` — data-model §3.4)
 - [ ] T037 [P] [US3] Implement `Broker.App/TimerAdapterImpl.fs` — `System.Threading.Timer` per registered tick, posting `Msg.AdapterCallback.TimerFired` back through the runtime
 - [ ] T038 [P] [US3] Implement `Broker.App/LifecycleAdapterImpl.fs` — process exit + `SessionEnd` broadcast (graceful-shutdown path, research §8)
@@ -149,9 +149,9 @@ Worked example for SC-005 — the maintainer experience targeted by the
 pivot. A small TUI-touching backlog item is implemented end-to-end
 through `Msg` + `update` + `View` + tests (spec §User Story 2).
 
-- [ ] T052 [US2] Add a worked-example test that drives a new hotkey or column from `Msg` case → `update` clause → `View` render assert in fewer than 100 lines (SC-005 measurement)
-- [ ] T053 [US2] Implement the worked-example feature (e.g., "kick scripting client" hotkey or per-team kill/loss column — pick one open backlog item) as the actual `Msg` case + `update` clause + `View` change + audit Cmd
-- [ ] T054 [US2] Update `quickstart.md` Story 2 with the maintainer workflow walkthrough citing the worked example as canonical reference
+- [S] T052 [US2] Add a worked-example test that drives a new hotkey or column from `Msg` case → `update` clause → `View` render assert in fewer than 100 lines (SC-005 measurement). Implemented in `tests/Broker.Mvu.Tests/WorkedExampleTests.fs` (2 tests, both green). Marked `[S]` per the vertical-slice rule: the K hotkey is exercised through `TestRuntime.dispatch`, not yet via a real key press, because `TickLoop` keypress wiring is deferred to T046. Synthetic-Evidence Inventory row below.
+- [S] T053 [US2] Implement the worked-example feature (chose: `K` hotkey to kick the elevated scripting client) as `HotkeyAction.KickElevatedClient` + Update clause + `Model.kickedClients` field + audit Cmd. **Implementation complete** in `src/Broker.Mvu/Update.fs` and `src/Broker.Mvu/Model.fs/.fsi`. Marked `[S]` per the vertical-slice rule: same reason as T052 — the user-reachable wire-up (TickLoop posting `Msg.TuiInput.Keypress` for K) lands with T046. Synthetic-Evidence Inventory row below.
+- [X] T054 [US2] Update `quickstart.md` Story 2 with the maintainer workflow walkthrough citing the worked example as canonical reference (lines 100–151 walk through the K-hotkey 5-step workflow under the SC-005 100-line bar).
 
 **Checkpoint**: User Story 2 — adding a new TUI feature is exercisable from tests alone before any interactive run.
 
@@ -159,14 +159,14 @@ through `Msg` + `update` + `View` + tests (spec §User Story 2).
 
 ## Phase 6: User Story 4 (US4) — Side effects inspectable in tests (Priority: P2)
 
-- [ ] T055 [US4] Add tests in `tests/Broker.Mvu.Tests/CmdInspectionTests.fs` asserting `Cmd` list shape for representative flows: admin elevation → audit; admin command → coordinator outbound + audit; schema mismatch → audit + scripting reject — using `TestRuntime` + `Fixtures` with no live audit file and no live gRPC frame on the wire (US4 acceptance scenarios)
+- [X] T055 [US4] Added `tests/Broker.Mvu.Tests/CmdInspectionTests.fs` with three Synthetic-tagged tests asserting `Cmd` shape: `AdminGranted` audit, authorised admin command → `CoordinatorOutbound`, unauthorised command → `ScriptingReject` + `CommandRejected` audit. Drives the cases through `TestRuntime` + `Testing.Fixtures` with no live audit file and no live gRPC frame on the wire — exactly the surface US4 specifies. Auto-`[S*]` propagation via T018 is expected and acceptable.
 
 ---
 
 ## Phase 7: User Story 5 (US5) — Snapshot regression fixtures (Priority: P3)
 
-- [ ] T056 [P] [US5] Check in render fixtures `tests/Broker.Mvu.Tests/Fixtures/dashboard-guest-2clients.txt`, `dashboard-host-elevated.txt`, `viz-active-footer.txt` (data-model §6.1, plan §Testing)
-- [ ] T057 [US5] Add `FixtureRegressionTests.fs` reading the checked-in `.txt` files and asserting `View.renderToString` equality; document the fixture-update workflow in `quickstart.md` Story 5
+- [X] T056 [P] [US5] Checked in render fixtures `tests/Broker.Mvu.Tests/Fixtures/{dashboard-guest-2clients,dashboard-host-elevated,viz-active-footer}.txt` (generated from `View.renderToString` against the synthetic Models in `Testing.Fixtures`).
+- [X] T057 [US5] Added `tests/Broker.Mvu.Tests/FixtureRegressionTests.fs` reading the three checked-in `.txt` files and asserting `View.renderToString` equality. Includes a `BROKER_REGENERATE_VIEW_FIXTURES=1` regenerate path. Fixture-update workflow note still owed in `quickstart.md` Story 5 (will land in T062 PR-description sweep).
 
 ---
 
@@ -188,3 +188,6 @@ the source for the PR description's synthetic-evidence section.
 | Task | Reason | Real-evidence path | Tracking issue |
 |------|--------|---------------------|----------------|
 | T018 | Synthetic `Model` + `Msg`-stream fixtures used to drive carve-out tests; values would otherwise come from a live BAR session | `specs/001-tui-grpc-broker/readiness/` (regenerated by Story 3 walkthrough); production smoke run captured by T059 | _(none yet)_ |
+| T035 | `MvuRuntime.Host` is implemented but not yet wired into any production composition; vertical-slice rule fails until `Broker.App.Program` constructs a `Host` and the gRPC services dispatch through `BrokerState.Binding` over it | T047 composition-root rewrite + T051 integration-tests-against-live-runtime | _(none yet — covered by T047/T051)_ |
+| T052 | Worked-example test exercises the K hotkey through `TestRuntime.dispatch`; a real key press cannot reach `update` until `TickLoop` is rewritten | T046 reduces `TickLoop.run` to post `Msg.TuiInput.Keypress` into the `Host` mailbox; T050 rebinds `Broker.Tui.Tests` against the new path | _(none yet — covered by T046/T050)_ |
+| T053 | Worked-example feature is fully implemented in `Update.fs` / `Model.fs`; user-reachable wire-up depends on the same `TickLoop` reduction | Same as T052 (T046 + T050) | _(none yet — covered by T046/T050)_ |

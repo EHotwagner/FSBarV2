@@ -1,0 +1,11 @@
+  F Broker.Mvu.TestRuntime.Handle._placeholder : Unit
+M Broker.Mvu.TestRuntime.capturedCmds(h:Handle) : FSharpList<Cmd`1>
+M Broker.Mvu.TestRuntime.clearCapturedCmds(h:Handle) : Void
+M Broker.Mvu.TestRuntime.completeCmd(h:Handle, i:Int32, resultMsg:Msg) : Void
+M Broker.Mvu.TestRuntime.create(initialModel:Model) : Handle
+M Broker.Mvu.TestRuntime.currentModel(h:Handle) : Model
+M Broker.Mvu.TestRuntime.dispatch(h:Handle, msg:Msg) : Void
+M Broker.Mvu.TestRuntime.dispatchAll(h:Handle, msgs:FSharpList<Msg>) : Void
+M Broker.Mvu.TestRuntime.failCmd(h:Handle, i:Int32, failure:CmdFailure) : Void
+M Broker.Mvu.TestRuntime.runUntilQuiescent(h:Handle) : Void
+T Broker.Mvu.TestRuntime.Handle : record

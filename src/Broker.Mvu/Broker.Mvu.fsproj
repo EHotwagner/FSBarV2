@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <IsPackable>true</IsPackable>
+    <PackageId>Broker.Mvu</PackageId>
+    <RootNamespace>Broker.Mvu</RootNamespace>
+    <Description>Elmish MVU spine for the broker: Model, Msg, Cmd, update, view, production runtime, test runtime, and per-effect-family adapter interfaces. Replaces the mutable Hub state container shipped by features 001/002.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Cmd.fsi" />
+    <Compile Include="Cmd.fs" />
+    <Compile Include="Msg.fsi" />
+    <Compile Include="Msg.fs" />
+    <Compile Include="Model.fsi" />
+    <Compile Include="Model.fs" />
+    <Compile Include="Adapters/AuditAdapter.fsi" />
+    <Compile Include="Adapters/AuditAdapter.fs" />
+    <Compile Include="Adapters/CoordinatorAdapter.fsi" />
+    <Compile Include="Adapters/CoordinatorAdapter.fs" />
+    <Compile Include="Adapters/ScriptingAdapter.fsi" />
+    <Compile Include="Adapters/ScriptingAdapter.fs" />
+    <Compile Include="Adapters/VizAdapter.fsi" />
+    <Compile Include="Adapters/VizAdapter.fs" />
+    <Compile Include="Adapters/TimerAdapter.fsi" />
+    <Compile Include="Adapters/TimerAdapter.fs" />
+    <Compile Include="Adapters/LifecycleAdapter.fsi" />
+    <Compile Include="Adapters/LifecycleAdapter.fs" />
+    <Compile Include="Update.fsi" />
+    <Compile Include="Update.fs" />
+    <Compile Include="View.fsi" />
+    <Compile Include="View.fs" />
+    <Compile Include="MvuRuntime.fsi" />
+    <Compile Include="MvuRuntime.fs" />
+    <Compile Include="TestRuntime.fsi" />
+    <Compile Include="TestRuntime.fs" />
+    <Compile Include="Testing/Fixtures.fsi" />
+    <Compile Include="Testing/Fixtures.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Broker.Core\Broker.Core.fsproj" />
+    <ProjectReference Include="..\Broker.Contracts\Broker.Contracts.fsproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Elmish" Version="4.2.0" />
+    <PackageReference Include="Spectre.Console" Version="0.55.2" />
+  </ItemGroup>
+
+</Project>

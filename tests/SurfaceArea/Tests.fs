@@ -25,7 +25,8 @@ let private brokerAssemblies : Assembly list =
       typeof<Broker.Protocol.BackpressureGate.CommandAck>.Assembly    // Broker.Protocol
       typeof<Broker.Tui.Layout.Slot>.Assembly                         // Broker.Tui
       typeof<Broker.Viz.SceneBuilder.Scene>.Assembly                  // Broker.Viz
-      typeof<Broker.App.Cli.Args>.Assembly ]                          // Broker.App
+      typeof<Broker.App.Cli.Args>.Assembly                            // Broker.App
+      typeof<Broker.Mvu.Cmd.RpcId>.Assembly ]                         // Broker.Mvu
     |> List.distinct
 
 let private oneModuleTest (asm: Assembly) (moduleName: string) : Test =

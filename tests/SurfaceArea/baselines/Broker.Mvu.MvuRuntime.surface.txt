@@ -1,0 +1,17 @@
+  F Broker.Mvu.MvuRuntime.AdapterSet.audit : AuditAdapter
+  F Broker.Mvu.MvuRuntime.AdapterSet.coordinator : CoordinatorAdapter
+  F Broker.Mvu.MvuRuntime.AdapterSet.lifecycle : LifecycleAdapter
+  F Broker.Mvu.MvuRuntime.AdapterSet.scripting : ScriptingAdapter
+  F Broker.Mvu.MvuRuntime.AdapterSet.timer : TimerAdapter
+  F Broker.Mvu.MvuRuntime.AdapterSet.viz : VizAdapter
+  F Broker.Mvu.MvuRuntime.Host._placeholder : Unit
+M Broker.Mvu.MvuRuntime.awaitResponse(host:Host, operation:String, buildMsg:FSharpFunc<RpcContext,Msg>) : Task<r>
+M Broker.Mvu.MvuRuntime.create(initialModel:Model, adapters:AdapterSet) : Host
+M Broker.Mvu.MvuRuntime.currentModel(host:Host) : Model
+M Broker.Mvu.MvuRuntime.issueRpcId(host:Host) : RpcId
+M Broker.Mvu.MvuRuntime.postMsg(host:Host, msg:Msg) : Void
+M Broker.Mvu.MvuRuntime.shutdown(host:Host, reason:String) : Void
+M Broker.Mvu.MvuRuntime.start(host:Host, ct:CancellationToken) : Task<Unit>
+M Broker.Mvu.MvuRuntime.subscribeModel(host:Host) : ChannelReader<Model>
+T Broker.Mvu.MvuRuntime.AdapterSet : record
+T Broker.Mvu.MvuRuntime.Host : record

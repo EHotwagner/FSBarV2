@@ -7,19 +7,28 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="SurfaceWalker.fsi" />
-    <Compile Include="SurfaceWalker.fs" />
-    <Compile Include="Tests.fs" />
+    <Compile Include="UpdateTests.fs" />
+    <Compile Include="ViewTests.fs" />
+    <Compile Include="RuntimeTests.fs" />
+    <Compile Include="HubRetirementGuardTests.fs" />
+    <Compile Include="CarveoutT029Tests.fs" />
+    <Compile Include="CarveoutT037Tests.fs" />
+    <Compile Include="CarveoutT042Tests.fs" />
+    <Compile Include="CarveoutT046Tests.fs" />
+    <Compile Include="CmdInspectionTests.fs" />
+    <Compile Include="FixtureRegressionTests.fs" />
+    <Compile Include="WorkedExampleTests.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="Fixtures/*.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Broker.Mvu\Broker.Mvu.fsproj" />
     <ProjectReference Include="..\..\src\Broker.Core\Broker.Core.fsproj" />
     <ProjectReference Include="..\..\src\Broker.Protocol\Broker.Protocol.fsproj" />
-    <ProjectReference Include="..\..\src\Broker.Tui\Broker.Tui.fsproj" />
-    <ProjectReference Include="..\..\src\Broker.Viz\Broker.Viz.fsproj" />
-    <ProjectReference Include="..\..\src\Broker.App\Broker.App.fsproj" />
-    <ProjectReference Include="..\..\src\Broker.Mvu\Broker.Mvu.fsproj" />
   </ItemGroup>
 
   <ItemGroup>

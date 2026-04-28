@@ -1,0 +1,50 @@
+  C Broker.Mvu.Msg.AdapterCallback.MailboxHighWater(depth:Int32, highWater:Int32, sampledAt:DateTimeOffset)
+  C Broker.Mvu.Msg.AdapterCallback.QueueDepth(clientId:ScriptingClientId, depth:Int32, highWaterSinceLastSample:Int32, sampledAt:DateTimeOffset)
+  C Broker.Mvu.Msg.AdapterCallback.QueueOverflow(clientId:ScriptingClientId, rejectedSeq:Int64, at:DateTimeOffset)
+  C Broker.Mvu.Msg.AdapterCallback.TimerFired(timerId:TimerId, firedAt:DateTimeOffset)
+  C Broker.Mvu.Msg.AdapterCallback.VizWindowClosed(at:DateTimeOffset)
+  C Broker.Mvu.Msg.CmdFailure.AuditWriteFailed(summary:String, exn:Exception)
+  C Broker.Mvu.Msg.CmdFailure.CoordinatorSendFailed(summary:String, exn:Exception)
+  C Broker.Mvu.Msg.CmdFailure.ScriptingSendFailed(clientId:ScriptingClientId, summary:String, exn:Exception)
+  C Broker.Mvu.Msg.CmdFailure.TimerFailed(timerId:TimerId, summary:String, exn:Exception)
+  C Broker.Mvu.Msg.CmdFailure.VizOpFailed(summary:String, exn:Exception)
+  C Broker.Mvu.Msg.CoordinatorInbound.Heartbeat(Item1:HeartbeatRequest, Item2:RpcContext)
+  C Broker.Mvu.Msg.CoordinatorInbound.OpenCommandChannelOpened(pluginId:String, Item2:RpcContext)
+  C Broker.Mvu.Msg.CoordinatorInbound.PushStateClosed(reason:String)
+  C Broker.Mvu.Msg.CoordinatorInbound.PushStateDelta(seq:UInt64, delta:StateDelta)
+  C Broker.Mvu.Msg.CoordinatorInbound.PushStateKeepAlive(seq:UInt64)
+  C Broker.Mvu.Msg.CoordinatorInbound.PushStateOpened(pluginId:String, Item2:RpcContext)
+  C Broker.Mvu.Msg.CoordinatorInbound.PushStateSnapshot(seq:UInt64, snapshot:GameStateSnapshot)
+  C Broker.Mvu.Msg.Lifecycle.RuntimeStarted(at:DateTimeOffset)
+  C Broker.Mvu.Msg.Lifecycle.RuntimeStopRequested(reason:String, at:DateTimeOffset)
+  C Broker.Mvu.Msg.Lifecycle.SessionEnded(reason:EndReason, at:DateTimeOffset)
+  C Broker.Mvu.Msg.Msg.AdapterCallback(Item:AdapterCallback)
+  C Broker.Mvu.Msg.Msg.CmdFailure(Item:CmdFailure)
+  C Broker.Mvu.Msg.Msg.CoordinatorInbound(Item:CoordinatorInbound)
+  C Broker.Mvu.Msg.Msg.Lifecycle(Item:Lifecycle)
+  C Broker.Mvu.Msg.Msg.ScriptingInbound(Item:ScriptingInbound)
+  C Broker.Mvu.Msg.Msg.Tick(Item:Tick)
+  C Broker.Mvu.Msg.Msg.TuiInput(Item:TuiInput)
+  C Broker.Mvu.Msg.ScriptingInbound.Command(clientId:ScriptingClientId, cmd:Command)
+  C Broker.Mvu.Msg.ScriptingInbound.Disconnected(clientId:ScriptingClientId, reason:String)
+  C Broker.Mvu.Msg.ScriptingInbound.Hello(Item1:HelloRequest, Item2:RpcContext)
+  C Broker.Mvu.Msg.ScriptingInbound.Subscribe(clientId:ScriptingClientId, Item2:RpcContext)
+  C Broker.Mvu.Msg.ScriptingInbound.Unsubscribe(clientId:ScriptingClientId)
+  C Broker.Mvu.Msg.Tick.DashboardTick(at:DateTimeOffset)
+  C Broker.Mvu.Msg.Tick.HeartbeatProbe(at:DateTimeOffset)
+  C Broker.Mvu.Msg.Tick.SnapshotStaleness(at:DateTimeOffset)
+  C Broker.Mvu.Msg.TuiInput.Keypress(Item:ConsoleKeyInfo)
+  C Broker.Mvu.Msg.TuiInput.QuitRequested()
+  C Broker.Mvu.Msg.TuiInput.Resize(width:Int32, height:Int32)
+  F Broker.Mvu.Msg.RpcContext.operation : String
+  F Broker.Mvu.Msg.RpcContext.receivedAt : DateTimeOffset
+  F Broker.Mvu.Msg.RpcContext.rpcId : RpcId
+T Broker.Mvu.Msg.AdapterCallback : union
+T Broker.Mvu.Msg.CmdFailure : union
+T Broker.Mvu.Msg.CoordinatorInbound : union
+T Broker.Mvu.Msg.Lifecycle : union
+T Broker.Mvu.Msg.Msg : union
+T Broker.Mvu.Msg.RpcContext : record
+T Broker.Mvu.Msg.ScriptingInbound : union
+T Broker.Mvu.Msg.Tick : union
+T Broker.Mvu.Msg.TuiInput : union

@@ -10,10 +10,15 @@
          FS0078 would warn on `private` or `internal` on top-level bindings
          in a file that has a companion .fsi. We promote it to error. -->
     <WarningsAsErrors>$(WarningsAsErrors);FS0078</WarningsAsErrors>
+    <!-- FS3511 fires under Release on `task { }` blocks whose resumable
+         code can't be statically reduced; the compiler falls back to a
+         slower dynamic implementation. Per F# docs, suppressing is
+         acceptable when the runtime cost is tolerable. -->
+    <NoWarn>$(NoWarn);FS3511</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup Label="Package">
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
     <Authors>$(USER)</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>

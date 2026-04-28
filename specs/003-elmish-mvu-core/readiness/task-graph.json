@@ -26,7 +26,7 @@
       "story": null,
       "tier": null,
       "parallel": true,
-      "title": "Scaffold `src/Broker.Mvu/Broker.Mvu.fsproj` with `ProjectReference`s to `Broker.Core` and `PackageReference`s to `Elmish` + `Spectre.Console` (plan \u00a7Project Structure)",
+      "title": "Scaffold `src/Broker.Mvu/Broker.Mvu.fsproj` with `ProjectReference`s to `Broker.Core` and `Broker.Contracts` (the latter supplies the `Highbar.V1.*` and `FSBarV2.Broker.Contracts.*` namespaces opened from `Msg.fsi`) and `PackageReference`s to `Elmish` + `Spectre.Console` (plan \u00a7Project Structure)",
       "explicit_deps": [],
       "phase_deps": [],
       "root_cause": []
@@ -945,7 +945,7 @@
       "story": null,
       "tier": null,
       "parallel": false,
-      "title": "Surface-area baselines refresh \u2014 regenerate baselines for new + updated public modules; delete the retired `Broker.Protocol.BrokerState.surface.txt` Hub-era baseline; commit refreshed `.txt` files (Tier 1 obligation)",
+      "title": "Surface-area baselines refresh \u2014 regenerate baselines for new + updated public modules; delete the retired `Broker.Protocol.BrokerState.surface.txt` Hub-era baseline; commit refreshed `.txt` files. **FR-019 / FR-020 guard**: confirm `Broker.Contracts.*` baselines are byte-identical to the feature-002-head versions, and that `HighBarCoordinatorService.surface.txt` / `ScriptingClientService.surface.txt` differ from feature-002-head only in the constructor parameter type (`Hub` \u2192 `BrokerState.Binding`); fail the task if any other gRPC service surface drift is found (Tier 1 obligation)",
       "explicit_deps": [],
       "phase_deps": [
         "T057"

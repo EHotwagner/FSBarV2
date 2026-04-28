@@ -230,7 +230,7 @@ src/
 │   │   the corresponding `Model.foo` field, but this happens
 │   │   inside `Broker.Mvu.Update` which is not part of `Broker.Core`.
 │
-├── Broker.Mvu/                             # ⊕ NEW — the MVU spine (Broker.Core + Elmish + Spectre.Console deps only)
+├── Broker.Mvu/                             # ⊕ NEW — the MVU spine (Broker.Core + Broker.Contracts + Elmish + Spectre.Console deps)
 │   ├── Model.fsi/.fs                           # the immutable Model record + builder
 │   ├── Msg.fsi/.fs                             # the Msg discriminated union (every input)
 │   ├── Cmd.fsi/.fs                             # the Cmd DU — AuditCmd / CoordinatorOutbound /

@@ -588,9 +588,12 @@ that updating the fixture closes the failure.
 - Replacing Serilog as the audit-log sink.
 - Closing T035 (host-mode game-process management against a real
   BAR engine). T035 is environment-provisioning, not state-shape.
-- Adding new operator-visible features. The pivot is purely
-  internal; new features are written *on top of* the MVU runtime
-  in subsequent changes.
+- Adding new operator-visible features, with one bounded exception:
+  the SC-005 worked-example hotkey/column (single feature, ≤100 LOC,
+  pinned in tasks.md T053). Its purpose is to *measure* the
+  maintainer-experience claim, not to deliver new operator
+  capability; any operator-facing features beyond that single
+  example are written on top of the MVU runtime in later changes.
 - Changing the gRPC wire surface, the proto contracts, the audit
   envelope, the dashboard layout, the hotkey set, or the viz
   behaviour.

@@ -17,8 +17,10 @@ constraint each member enforces (FR / SC reference where useful).
 
 ## ⊕ NEW project — `Broker.Mvu`
 
-`Broker.Mvu.fsproj` references `Broker.Core` (project) and the
-`Elmish` and `Spectre.Console` NuGet packages. It does NOT
+`Broker.Mvu.fsproj` `ProjectReference`s `Broker.Core` and
+`Broker.Contracts` (the latter supplies the `Highbar.V1.*` and
+`FSBarV2.Broker.Contracts.*` namespaces opened from `Msg.fsi`),
+and `PackageReference`s `Elmish` + `Spectre.Console`. It does NOT
 reference `Broker.Protocol`, `Broker.Tui`, `Broker.Viz`, or
 `Broker.App`.
 

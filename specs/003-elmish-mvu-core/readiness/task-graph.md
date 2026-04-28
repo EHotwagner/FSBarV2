@@ -213,7 +213,7 @@ graph TD
 
 ```
 T001 [ ] Pin the `Elmish` package (latest stable 4.x) in `Directory.Packages.props` per the repo's central-package-management discipline (plan §Technical Context, spec Assumptions)
-T002 [ ] Scaffold `src/Broker.Mvu/Broker.Mvu.fsproj` with `ProjectReference`s to `Broker.Core` and `PackageReference`s to `Elmish` + `Spectre.Console` (plan §Project Structure)
+T002 [ ] Scaffold `src/Broker.Mvu/Broker.Mvu.fsproj` with `ProjectReference`s to `Broker.Core` and `Broker.Contracts` (the latter supplies the `Highbar.V1.*` and `FSBarV2.Broker.Contracts.*` namespaces opened from `Msg.fsi`) and `PackageReference`s to `Elmish` + `Spectre.Console` (plan §Project Structure)
 T003 [ ] Scaffold `tests/Broker.Mvu.Tests/Broker.Mvu.Tests.fsproj` with refs to `Broker.Mvu`, `Broker.Protocol`, and Expecto (plan §Testing)
 T004 [ ] Register both new projects in `FSBarV2.sln` and create the readiness scaffolding `specs/003-elmish-mvu-core/readiness/{transcripts,artefacts,baselines}/`
 T005 [ ] Record feature Tier 1, affected layer, public-API impact, and required evidence obligations to `specs/003-elmish-mvu-core/readiness/feature-tier.md`
@@ -269,7 +269,7 @@ T054 [ ] Update `quickstart.md` Story 2 with the maintainer workflow walkthrough
 T055 [ ] Add tests in `tests/Broker.Mvu.Tests/CmdInspectionTests.fs` asserting `Cmd` list shape for representative flows: admin elevation → audit; admin command → coordinator outbound + audit; schema mismatch → audit + scripting reject — using `TestRuntime` + `Fixtures` with no live audit file and no live gRPC frame on the wire (US4 acceptance scenarios)
 T056 [ ] Check in render fixtures `tests/Broker.Mvu.Tests/Fixtures/dashboard-guest-2clients.txt`, `dashboard-host-elevated.txt`, `viz-active-footer.txt` (data-model §6.1, plan §Testing)
 T057 [ ] Add `FixtureRegressionTests.fs` reading the checked-in `.txt` files and asserting `View.renderToString` equality; document the fixture-update workflow in `quickstart.md` Story 5
-T058 [ ] Surface-area baselines refresh — regenerate baselines for new + updated public modules; delete the retired `Broker.Protocol.BrokerState.surface.txt` Hub-era baseline; commit refreshed `.txt` files (Tier 1 obligation)
+T058 [ ] Surface-area baselines refresh — regenerate baselines for new + updated public modules; delete the retired `Broker.Protocol.BrokerState.surface.txt` Hub-era baseline; commit refreshed `.txt` files. **FR-019 / FR-020 guard**: confirm `Broker.Contracts.*` baselines are byte-identical to the feature-002-head versions, and that `HighBarCoordinatorService.surface.txt` / `ScriptingClientService.surface.txt` differ from feature-002-head only in the constructor parameter type (`Hub` → `BrokerState.Binding`); fail the task if any other gRPC service surface drift is found (Tier 1 obligation)
 T059 [ ] Run the packed `Broker.Mvu` library through `scripts/prelude.fsx` and any numbered example scripts under `scripts/examples/`; capture session to `readiness/transcripts/integration-fsi-session.txt` (Constitution Principle I, US1 independent test confirmation)
 T060 [ ] Run `speckit.graph.compute` (or `.specify/extensions/evidence/scripts/bash/run-audit.sh --graph-only`) — confirm no cycles, no dangling refs, no `[S*]` surprises
 T061 [ ] Run `speckit.evidence.audit` — confirm verdict PASS or document every `--accept-synthetic` override against `readiness/feature-tier.md`

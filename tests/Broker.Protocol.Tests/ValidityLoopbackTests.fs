@@ -59,6 +59,43 @@ let private readNext (call: AsyncServerStreamingCall<StateMsg>) (token: Cancella
 [<Tests>]
 let validityLoopbackTests =
     testList "BARC-01 coordinator to scripting validity loopback" [
+        test "wire admission rejects malformed identities and ambiguous unit orders" {
+            let mkCommand () =
+                let command = Command.empty()
+                command.CommandId <- Google.Protobuf.ByteString.CopyFrom(Guid.NewGuid().ToByteArray())
+                command.OriginatingClient <- "watcher"
+                command.SubmittedAtUnixMs <- DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                let pause = AdminPayload.empty()
+                pause.Pause <- Pause.empty()
+                command.Admin <- pause
+                command
+            let malformedId = mkCommand ()
+            malformedId.CommandId <- Google.Protobuf.ByteString.Empty
+            match WireConvert.tryToCoreCommand malformedId with
+            | Error (CommandPipeline.InvalidPayload _) -> ()
+            | other -> failtestf "malformed UUID should reject: %A" other
+
+            let command = mkCommand ()
+            let order = UnitOrder.empty()
+            order.UnitIds.Add(1u)
+            order.UnitIds.Add(2u)
+            order.Kind <- UnitOrder.Types.OrderKind.Move
+            let target = Vec2.empty()
+            target.X <- 1.0f
+            target.Y <- 2.0f
+            order.TargetPos <- ValueSome target
+            let gameplay = GameplayPayload.empty()
+            gameplay.UnitOrder <- order
+            command.Gameplay <- gameplay
+            match WireConvert.tryToCoreCommand command with
+            | Error (CommandPipeline.InvalidPayload _) -> ()
+            | other -> failtestf "multi-unit command should reject: %A" other
+
+            let valid = mkCommand ()
+            match WireConvert.tryToCoreCommand valid with
+            | Ok { kind = CommandPipeline.Admin CommandPipeline.Pause } -> ()
+            | other -> failtestf "valid pause should decode: %A" other
+        }
         testAsync "Synthetic_BARC01 snapshot gap and unapplied-delta recovery stay fail closed" {
             let port = freePort()
             let audit = ConcurrentQueue<Audit.AuditEvent>()
@@ -128,6 +165,9 @@ let validityLoopbackTests =
                 command.CommandId <- Google.Protobuf.ByteString.CopyFrom(Guid.NewGuid().ToByteArray())
                 command.OriginatingClient <- "watcher"
                 command.SubmittedAtUnixMs <- DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                let pause = AdminPayload.empty()
+                pause.Pause <- Pause.empty()
+                command.Admin <- pause
                 do! submit.RequestStream.WriteAsync(command) |> Async.AwaitTask
                 let! hasAck = submit.ResponseStream.MoveNext(timeout.Token) |> Async.AwaitTask
                 Expect.isTrue hasAck "invalid-state command gets an acknowledgement"

@@ -14,25 +14,22 @@ publication and deployment remain outside this window.
 
 ## Window status
 
-- [ ] **BARC-01.1a — ground-coordinate mapping.** Implemented and tested on
-  the local routine branch; pending admission and merge. Native `(X,Y,Z)` now
+- [x] **BARC-01.1a — ground-coordinate mapping.** Merged by PR #1 and independently read back from protected `main`. Native `(X,Y,Z)` now
   maps to legacy ground `(X,Z)`. Move, Patrol, Build and positional Attack
   targets map back to `(X,0,Z)`. The legacy model does not retain elevation.
-- [ ] **BARC-01.1b — fail-closed state reduction.** Implemented and tested on
-  the local routine branch; pending admission and merge. Only a complete
+- [x] **BARC-01.1b — fail-closed state reduction.** Merged by PR #1 and independently read back from protected `main`. Only a complete
   snapshot establishes a baseline. Sequence gaps, incomplete snapshots and
   nonempty deltas that the broker cannot fully materialize invalidate it.
   Empty deltas and keepalives affect transport progress only; stale or
   duplicate updates cannot regress state; a newer complete snapshot recovers.
-- [ ] **BARC-01.1c — subscriber validity propagation.** Implemented and tested
-  on the local routine branch; pending admission and merge. The real
+- [x] **BARC-01.1c — subscriber validity propagation.** Merged by PR #1 and independently read back from protected `main`. The real
   HighBarCoordinatorService → BrokerState → scripting SubscribeState path
   emits additive invalidity metadata, suppresses cached state for late joins,
   blocks scripting command admission while a gap is current, and clears the
   live gap on full-snapshot recovery while retaining audit history.
 
-The boxes stay open until the implementation is merged and read back from the
-default branch.
+Protected `main` is `57261ce57dfebc86d7cd4301118ec01fd935504b`; its tree
+`722df87507c357aba2168f336b44b0c7229dad5e` matches the tested local source tree.
 
 ## Evidence boundary
 

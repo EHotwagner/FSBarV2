@@ -68,3 +68,12 @@ module WireConvert =
         command:CommandPipeline.Command
         -> batchSeq:uint64
         -> Result<Highbar.V1.CommandBatch, CommandPipeline.RejectReason>
+
+    /// Validate the complete command before producing any wire value, then
+    /// expand a unit order to exactly one ordered batch per distinct acting
+    /// unit. The caller supplies already-reserved sequence/correlation pairs;
+    /// their count must match the expansion cardinality.
+    val tryExpandCoreCommandToHighBar :
+        command:CommandPipeline.Command
+        -> allocations:(uint64 * uint64) list
+        -> Result<Highbar.V1.CommandBatch list, CommandPipeline.RejectReason>

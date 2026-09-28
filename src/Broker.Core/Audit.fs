@@ -4,6 +4,11 @@ open System
 
 module Audit =
 
+    type CoordinatorDeliveryOutcome =
+        | WrittenToTransport
+        | Unknown
+        | NotAttempted
+
     type AuditEvent =
         | ClientConnected of at:DateTimeOffset * id:ScriptingClientId * version:Version
         | ClientDisconnected of at:DateTimeOffset * id:ScriptingClientId * reason:string
@@ -21,6 +26,7 @@ module Audit =
         | CoordinatorHeartbeat of at:DateTimeOffset * pluginId:string * frame:uint32
         | CoordinatorCommandChannelOpened of at:DateTimeOffset * pluginId:string
         | CoordinatorCommandChannelClosed of at:DateTimeOffset * pluginId:string * reason:string
+        | CoordinatorCommandDelivery of at:DateTimeOffset * sessionId:Guid * originatingClient:ScriptingClientId * parentCommandId:Guid * childIndex:int * childCount:int * actingUnit:uint32 * batchSeq:uint64 * correlation:uint64 * outcome:CoordinatorDeliveryOutcome * detail:string
         | CoordinatorStateGap of at:DateTimeOffset * pluginId:string * lastSeq:uint64 * receivedSeq:uint64
         | CoordinatorStateInvalidated of at:DateTimeOffset * pluginId:string * lastSeq:uint64 * receivedSeq:uint64 * detail:string
 
@@ -92,6 +98,13 @@ module Audit =
             struct (
                 "audit.coordinator_command_channel_closed at={At} plugin_id={PluginId} reason={Reason}",
                 [| "At", box at; "PluginId", box pid; "Reason", box reason |])
+        | CoordinatorCommandDelivery (at, sessionId, client, parentId, childIndex, childCount, actingUnit, batchSeq, correlation, outcome, detail) ->
+            struct (
+                "audit.coordinator_command_delivery at={At} session_id={SessionId} client_name={ClientName} parent_command_id={ParentCommandId} child_index={ChildIndex} child_count={ChildCount} acting_unit={ActingUnit} batch_seq={BatchSeq} correlation={Correlation} outcome={Outcome} detail={Detail}",
+                [| "At", box at; "SessionId", box sessionId; "ClientName", box (nameOf client); "ParentCommandId", box parentId
+                   "ChildIndex", box childIndex; "ChildCount", box childCount; "ActingUnit", box actingUnit
+                   "BatchSeq", box batchSeq; "Correlation", box correlation
+                   "Outcome", box (sprintf "%A" outcome); "Detail", box detail |])
         | CoordinatorStateGap (at, pid, lastSeq, recvSeq) ->
             struct (
                 "audit.coordinator_state_gap at={At} plugin_id={PluginId} last_seq={LastSeq} received_seq={ReceivedSeq}",

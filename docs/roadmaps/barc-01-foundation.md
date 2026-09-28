@@ -28,8 +28,9 @@ publication and deployment remain outside this window.
   blocks scripting command admission while a gap is current, and clears the
   live gap on full-snapshot recovery while retaining audit history.
 - [x] **BARC-01.1d — strict command admission.** Merged by PR #3 as protected `main` `b745e04728ebb6c8bea96667094ff2fa4eba7476`; 41 protocol, 58 core and 5 contract tests passed. Decode scripting wire commands with explicit errors before queue admission. Reject missing or ambiguous fields, non-finite coordinates and grants, unsupported custom commands, multi-unit orders, out-of-range native IDs and nonnumeric build definitions. Preserve the Guard target in the native command. Keep multi-unit expansion for BARC-01.1e; no native or browser qualification is implied by this synthetic broker slice.
+- [ ] **BARC-01.1e — bounded multi-unit broker delivery.** Source candidate validates 1–64 distinct acting units before admission and expands them in caller order to one native batch per unit. One bounded parent-envelope queue now owns scripting and operator admission; a full queue rejects the whole parent. Nonwrapping per-session sequence and correlation ranges bind every child through an audit mapping that retains the full parent UUID, session, client, acting unit and child count. Exactly one command reader may claim a session channel, and guaranteed lease-scoped cleanup accounts for every queued child without letting an old reader close a renewed channel; a live session can create a fresh empty reader channel after normal exit or cancellation. The writer records only `WrittenToTransport`, `Unknown`, or `NotAttempted`, stops without replay after failure/cancellation/session replacement, and never treats a completed gRPC write as native acceptance. Admission remains closed until a complete telemetry baseline exists. Focused protocol, Core, Contracts and synthetic loopback evidence is required before merge; native CoordinatorClient acceptance remains unavailable because it drops batch/client/index provenance and may overflow-drop commands.
 
-BARC-01.1a–d are merged to protected `main`. BARC-01.1e owns multi-unit expansion and later native qualification.
+BARC-01.1a–d are merged to protected `main`. BARC-01.1e remains a source candidate until protected merge readback; later native qualification remains separate.
 
 ## Evidence boundary
 
@@ -42,3 +43,5 @@ BAR content compatibility, browser/WASM behavior or installed operation.
 
 The local protobuf bootstrap pins `grpc-fsharp` 0.2.0 to match
 `Grpc-FSharp.Tools` 0.2.0. No dependency or HighBar schema pin is upgraded.
+
+The repository-wide integration and SurfaceArea projects currently cannot restore the pre-existing unavailable `SkiaViewer` dependency. The .1e source is therefore also exercised through focused temporary projects that reference only the unchanged Core, Contracts and Protocol projects; public surface baselines are generated with the repository's existing `SurfaceWalker`. This does not qualify the native plugin or the blocked viewer dependency.

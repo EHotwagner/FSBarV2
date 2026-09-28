@@ -4,6 +4,14 @@ open System
 
 module Audit =
 
+    /// The strongest result the broker can observe for one expanded child.
+    /// WrittenToTransport is only a completed gRPC stream write; the native
+    /// plugin exposes no per-batch acceptance receipt.
+    type CoordinatorDeliveryOutcome =
+        | WrittenToTransport
+        | Unknown
+        | NotAttempted
+
     type AuditEvent =
         | ClientConnected of at:DateTimeOffset * id:ScriptingClientId * version:Version
         | ClientDisconnected of at:DateTimeOffset * id:ScriptingClientId * reason:string
@@ -22,6 +30,7 @@ module Audit =
         | CoordinatorHeartbeat of at:DateTimeOffset * pluginId:string * frame:uint32
         | CoordinatorCommandChannelOpened of at:DateTimeOffset * pluginId:string
         | CoordinatorCommandChannelClosed of at:DateTimeOffset * pluginId:string * reason:string
+        | CoordinatorCommandDelivery of at:DateTimeOffset * sessionId:Guid * originatingClient:ScriptingClientId * parentCommandId:Guid * childIndex:int * childCount:int * actingUnit:uint32 * batchSeq:uint64 * correlation:uint64 * outcome:CoordinatorDeliveryOutcome * detail:string
         | CoordinatorStateGap of at:DateTimeOffset * pluginId:string * lastSeq:uint64 * receivedSeq:uint64
         | CoordinatorStateInvalidated of at:DateTimeOffset * pluginId:string * lastSeq:uint64 * receivedSeq:uint64 * detail:string
 

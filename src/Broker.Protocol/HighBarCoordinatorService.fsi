@@ -1,5 +1,7 @@
 namespace Broker.Protocol
 
+open System.Threading
+open System.Threading.Tasks
 open Broker.Core
 open Highbar.V1
 
@@ -29,6 +31,15 @@ module HighBarCoordinatorService =
 
     /// True iff a coordinator session is currently attached.
     val isAttached : service:Service -> bool
+
+    /// Write one admitted parent delivery without retry. Outcomes stop at
+    /// the broker transport boundary and never imply native acceptance.
+    val writeDelivery :
+        service:Service
+        -> writeBatch:(CommandBatch -> Task)
+        -> cancellationToken:CancellationToken
+        -> delivery:BrokerState.OutboundDelivery
+        -> Task<string option>
 
     /// Force-detach the current coordinator (operator quit, broker
     /// shutdown). Closes any open `PushState` / `OpenCommandChannel`

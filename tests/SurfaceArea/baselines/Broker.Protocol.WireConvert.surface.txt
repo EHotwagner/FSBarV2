@@ -18,6 +18,7 @@ M Broker.Protocol.WireConvert.lastSeq(view:RunningView) : UInt64
 M Broker.Protocol.WireConvert.toCoreVersion(msg:ProtocolVersion) : Version
 M Broker.Protocol.WireConvert.toCoreVersionOpt(msg:FSharpValueOption<ProtocolVersion>) : Version
 M Broker.Protocol.WireConvert.toReject(reason:RejectReason, commandId:FSharpOption<Guid>, brokerVersion:FSharpOption<Version>) : Reject
+M Broker.Protocol.WireConvert.tryExpandCoreCommandToHighBar(command:Command, allocations:FSharpList<Tuple`2>) : FSharpResult<FSharpList`1,RejectReason>
 M Broker.Protocol.WireConvert.tryFromCoreCommandToHighBar(command:Command, batchSeq:UInt64) : FSharpResult<CommandBatch,RejectReason>
 M Broker.Protocol.WireConvert.tryToCoreCommand(msg:Command) : FSharpResult<Command,RejectReason>
 P Broker.Protocol.WireConvert.emptyRunningView : RunningView

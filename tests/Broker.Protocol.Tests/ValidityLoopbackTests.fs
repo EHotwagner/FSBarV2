@@ -29,9 +29,30 @@ let private mkHello name =
     request.ClientVersion <- ValueSome version
     request
 
-let private mkSnapshot seq frame =
+let private mkSnapshot seq frame includeUnit features =
     let snapshot = StateSnapshot.empty()
     snapshot.FrameNumber <- frame
+    if includeUnit then
+        let unit = OwnUnit.empty()
+        unit.UnitId <- 7u
+        unit.DefId <- 303u
+        unit.TeamId <- 2
+        let pos = Vector3.empty()
+        pos.X <- 3.0f
+        pos.Y <- 400.0f
+        pos.Z <- -5.0f
+        unit.Position <- ValueSome pos
+        snapshot.OwnUnits.Add(unit)
+    for id, kind, x, elevation, z in features do
+        let feature = MapFeature.empty()
+        feature.FeatureId <- id
+        feature.DefId <- kind
+        let pos = Vector3.empty()
+        pos.X <- x
+        pos.Y <- elevation
+        pos.Z <- z
+        feature.Position <- ValueSome pos
+        snapshot.MapFeatures.Add(feature)
     let update = StateUpdate.empty()
     update.Seq <- seq
     update.Frame <- frame
@@ -126,7 +147,15 @@ let validityLoopbackTests =
                 use push = coordinator.PushStateAsync()
                 use timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5.0))
 
-                do! push.RequestStream.WriteAsync(mkSnapshot 1UL 1u) |> Async.AwaitTask
+                do!
+                    push.RequestStream.WriteAsync(
+                        mkSnapshot
+                            1UL
+                            1u
+                            true
+                            [ 7u, 101u, 11.0f, 999.0f, -13.0f
+                              19u, 202u, -23.0f, 888.0f, 29.0f ])
+                    |> Async.AwaitTask
                 let! first = readNext stateCall timeout.Token
                 let! initial =
                     match first.Body with
@@ -137,6 +166,19 @@ let validityLoopbackTests =
                 match initial.Body with
                 | ValueSome (StateMsg.Types.Body.Snapshot snapshot) ->
                     Expect.equal snapshot.Tick 1L "complete snapshot is current"
+                    Expect.equal snapshot.Units.Count 1 "unit is retained"
+                    Expect.equal snapshot.Units.[0].Id 7u "unit id is independent of feature ids"
+                    Expect.equal snapshot.Features.Count 2 "both features reach scripting"
+                    let firstFeature = snapshot.Features.[0]
+                    Expect.equal firstFeature.Id 7u "feature may share id 7 with a unit"
+                    Expect.equal firstFeature.Kind "101" "first feature kind is exact"
+                    Expect.equal firstFeature.Pos.Value.X 11.0f "first feature X is exact"
+                    Expect.equal firstFeature.Pos.Value.Y -13.0f "native Z maps to scripting Y"
+                    let secondFeature = snapshot.Features.[1]
+                    Expect.equal secondFeature.Id 19u "second feature id is exact"
+                    Expect.equal secondFeature.Kind "202" "second feature kind is exact"
+                    Expect.equal secondFeature.Pos.Value.X -23.0f "second feature X is asymmetric"
+                    Expect.equal secondFeature.Pos.Value.Y 29.0f "second feature Z is asymmetric"
                 | other -> failtestf "expected initial snapshot, got %A" other
 
                 do! push.RequestStream.WriteAsync(mkNonemptyDelta 3UL 3u) |> Async.AwaitTask
@@ -184,13 +226,15 @@ let validityLoopbackTests =
                     Expect.stringContains reject.Detail "telemetry baseline is invalid" "actionable refusal"
                 | ValueNone -> failtest "expected command rejection detail"
 
-                do! push.RequestStream.WriteAsync(mkSnapshot 4UL 4u) |> Async.AwaitTask
+                do! push.RequestStream.WriteAsync(mkSnapshot 4UL 4u false []) |> Async.AwaitTask
                 let! recovered = readNext stateCall timeout.Token
                 let! lateRecovered = readNext lateCall timeout.Token
                 for message in [ recovered; lateRecovered ] do
                     match message.Body with
                     | ValueSome (StateMsg.Types.Body.Snapshot snapshot) ->
                         Expect.equal snapshot.Tick 4L "new full baseline recovers"
+                        Expect.equal snapshot.Features.Count 0 "empty snapshot replaces old features"
+                        Expect.equal snapshot.Units.Count 0 "empty snapshot replaces old units independently"
                     | other -> failtestf "expected recovered snapshot, got %A" other
                 Expect.isFalse (BrokerState.telemetryGap handle.Hub) "recovery clears current gap"
                 Expect.isTrue (BrokerState.telemetryValid handle.Hub) "recovery marks state current"
@@ -207,11 +251,19 @@ let validityLoopbackTests =
                 | ValueSome (StateMsg.Types.Body.Validity validity) ->
                     Expect.stringContains validity.Detail "does not materialize" "unapplied delta reason"
                 | other -> failtestf "expected unapplied-delta invalidation, got %A" other
-                do! push.RequestStream.WriteAsync(mkSnapshot 6UL 6u) |> Async.AwaitTask
+                do!
+                    push.RequestStream.WriteAsync(
+                        mkSnapshot 6UL 6u false [ 31u, 404u, 37.0f, 777.0f, -41.0f ])
+                    |> Async.AwaitTask
                 let! recoveredAgain = readNext stateCall timeout.Token
                 match recoveredAgain.Body with
                 | ValueSome (StateMsg.Types.Body.Snapshot snapshot) ->
                     Expect.equal snapshot.Tick 6L "second full baseline recovers"
+                    Expect.equal snapshot.Features.Count 1 "replacement feature set is current"
+                    Expect.equal snapshot.Features.[0].Id 31u "old feature ids do not survive replacement"
+                    Expect.equal snapshot.Features.[0].Kind "404" "replacement kind is exact"
+                    Expect.equal snapshot.Features.[0].Pos.Value.X 37.0f "replacement X is exact"
+                    Expect.equal snapshot.Features.[0].Pos.Value.Y -41.0f "replacement Z maps to scripting Y"
                 | other -> failtestf "expected second recovery, got %A" other
                 Expect.isTrue
                     (audit.ToArray()

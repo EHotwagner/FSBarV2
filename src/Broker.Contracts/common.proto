@@ -72,6 +72,12 @@ message Building {
   Vec2 pos = 4;
 }
 
+message Feature {
+  uint32 id = 1;
+  string kind = 2;
+  Vec2 pos = 3;
+}
+
 message GameStateSnapshot {
   // sessionId encoded as 16-byte UUID for cross-language safety.
   bytes session_id = 1;
@@ -81,6 +87,7 @@ message GameStateSnapshot {
   repeated Unit units = 5;
   repeated Building buildings = 6;
   MapMeta map_meta = 7;                 // Present in first snapshot only.
+  repeated Feature features = 8;
 }
 
 // ----- Commands -------------------------------------------------------

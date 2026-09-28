@@ -104,6 +104,13 @@ module WireConvert =
         w.Pos <- ValueSome (fromCoreVec b.pos)
         w
 
+    let private fromCoreFeature (f: Snapshot.Feature) : Feature =
+        let w = Feature.empty()
+        w.Id <- f.id
+        w.Kind <- f.kind
+        w.Pos <- ValueSome (fromCoreVec f.pos)
+        w
+
     let private toCoreMapMetaOpt (m: ValueOption<MapMeta>) : Snapshot.MapMeta option =
         match m with
         | ValueSome m ->
@@ -124,6 +131,8 @@ module WireConvert =
             w.Units.Add(fromCoreUnit u)
         for b in snapshot.buildings do
             w.Buildings.Add(fromCoreBuilding b)
+        for f in snapshot.features do
+            w.Features.Add(fromCoreFeature f)
         match snapshot.mapMeta with
         | None -> ()
         | Some m ->

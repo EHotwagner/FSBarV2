@@ -120,16 +120,9 @@ module ScriptingClientService =
                         SingleReader = true,
                         SingleWriter = false)
                 let ch = Channel.CreateBounded<StateMsg>(opts)
-                client.subscriber <- Some ch
-
-                // First message: current snapshot if any. Subsequent
-                // messages flow through the broadcast hook (see below).
-                match BrokerState.session hub |> Option.bind (fun s -> (Session.toReading DateTimeOffset.UtcNow s).telemetry) with
-                | Some snap ->
-                    let m = StateMsg.empty()
-                    m.Snapshot <- WireConvert.fromCoreSnapshot snap
-                    do! response.WriteAsync(m)
-                | None -> ()
+                // Install the subscriber and read the initial state under the
+                // same hub lock so invalidation cannot race a cached snapshot.
+                BrokerState.subscribeState client ch hub
 
                 try
                     try
@@ -142,7 +135,7 @@ module ScriptingClientService =
                     with
                     | :? OperationCanceledException -> ()
                 finally
-                    client.subscriber <- None
+                    BrokerState.unsubscribeState client hub
         } :> Task
 
     let internal handleSubmitCommands
@@ -171,14 +164,7 @@ module ScriptingClientService =
                                     None)
                         do! response.WriteAsync(ack)
                     | Some client ->
-                        let gate = BackpressureGate.create client.queue
-                        let result =
-                            BackpressureGate.process_
-                                gate
-                                (BrokerState.mode hub)
-                                (BrokerState.roster hub)
-                                (BrokerState.slots hub)
-                                cmd
+                        let result = BrokerState.admitScriptingCommand client cmd hub
                         let ack = CommandAck.empty()
                         ack.CommandId <- wire.CommandId
                         ack.Accepted <- result.accepted
@@ -188,10 +174,7 @@ module ScriptingClientService =
                                 Audit.AuditEvent.CommandRejected (
                                     DateTimeOffset.UtcNow, id, cmd.commandId, r))
                             ack.Reject <- ValueSome (WireConvert.toReject r (Some cmd.commandId) None)
-                        | None ->
-                            // Forward to proxy if attached; otherwise it stays
-                            // in the per-client queue and the next drain picks it up.
-                            BrokerState.sendToCoordinator cmd hub
+                        | None -> ()
                         do! response.WriteAsync(ack)
             with
             | :? OperationCanceledException -> ()

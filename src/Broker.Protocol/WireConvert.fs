@@ -262,55 +262,66 @@ module WireConvert =
 
     type RunningView =
         { sessionId: Guid
-          lastSeq: uint64
+          lastSeq: uint64 option
+          baselineValid: bool
           units: Map<uint32, Snapshot.Unit>
           features: Map<uint32, Snapshot.Feature>
           mapMeta: Snapshot.MapMeta option
-          economy: Snapshot.ResourceVector option
           lastFrame: int64 }
 
     let emptyRunningView : RunningView =
         { sessionId = Guid.Empty
-          lastSeq = 0UL
+          lastSeq = None
+          baselineValid = false
           units = Map.empty
           features = Map.empty
           mapMeta = None
-          economy = None
           lastFrame = 0L }
 
-    let lastSeq (view: RunningView) : uint64 = view.lastSeq
+    let lastSeq (view: RunningView) : uint64 = view.lastSeq |> Option.defaultValue 0UL
+
+    let hasValidBaseline (view: RunningView) : bool = view.baselineValid
 
     type ApplyResult =
         | NewSnapshot of Snapshot.GameStateSnapshot
         | Gap of lastSeq:uint64 * receivedSeq:uint64
+        | Invalidated of lastSeq:uint64 * receivedSeq:uint64 * detail:string
         | KeepAliveOnly
 
     // --- HighBar → Core helpers ---
 
     let private vec3ToVec2 (v: Highbar.V1.Vector3) : Snapshot.Vec2 =
-        { x = v.X; y = v.Y }   // research §2: drop z (broker is 2D)
+        // Recoil uses X/Z as its ground plane; Y is elevation. The legacy
+        // broker Vec2 therefore carries (X,Z), not (X,Y).
+        { x = v.X; y = v.Z }
 
-    let private vec3OptToVec2 (v: ValueOption<Highbar.V1.Vector3>) : Snapshot.Vec2 =
+    let private requirePosition (entity: string) (id: uint32) (v: ValueOption<Highbar.V1.Vector3>) : Result<Snapshot.Vec2, string> =
         match v with
-        | ValueSome v -> vec3ToVec2 v
-        | ValueNone -> { x = 0.0f; y = 0.0f }
+        | ValueSome v -> Ok (vec3ToVec2 v)
+        | ValueNone -> Error (sprintf "%s %u is missing position" entity id)
 
-    let private ownUnitToCoreUnit (u: Highbar.V1.OwnUnit) : Snapshot.Unit =
-        { id = u.UnitId
-          classId = string u.DefId
-          ownerPlayerId = u.TeamId
-          pos = vec3OptToVec2 u.Position }
+    let private ownUnitToCoreUnit (u: Highbar.V1.OwnUnit) : Result<Snapshot.Unit, string> =
+        requirePosition "own unit" u.UnitId u.Position
+        |> Result.map (fun pos ->
+            { id = u.UnitId
+              classId = string u.DefId
+              ownerPlayerId = u.TeamId
+              pos = pos })
 
-    let private enemyUnitToCoreUnit (u: Highbar.V1.EnemyUnit) : Snapshot.Unit =
-        { id = u.UnitId
-          classId = string u.DefId
-          ownerPlayerId = u.TeamId
-          pos = vec3OptToVec2 u.Position }
+    let private enemyUnitToCoreUnit (u: Highbar.V1.EnemyUnit) : Result<Snapshot.Unit, string> =
+        requirePosition "enemy unit" u.UnitId u.Position
+        |> Result.map (fun pos ->
+            { id = u.UnitId
+              classId = string u.DefId
+              ownerPlayerId = u.TeamId
+              pos = pos })
 
-    let private mapFeatureToCoreFeature (f: Highbar.V1.MapFeature) : Snapshot.Feature =
-        { id = f.FeatureId
-          kind = string f.DefId
-          pos = vec3OptToVec2 f.Position }
+    let private mapFeatureToCoreFeature (f: Highbar.V1.MapFeature) : Result<Snapshot.Feature, string> =
+        requirePosition "map feature" f.FeatureId f.Position
+        |> Result.map (fun pos ->
+            { id = f.FeatureId
+              kind = string f.DefId
+              pos = pos })
 
     let private staticMapToCoreMapMeta (m: ValueOption<Highbar.V1.StaticMap>) : Snapshot.MapMeta option =
         match m with
@@ -321,35 +332,16 @@ module WireConvert =
                   outline = sm.Heightmap.ToByteArray() }
         | ValueNone -> None
 
-    let private teamEconomyToCoreResources (e: ValueOption<Highbar.V1.TeamEconomy>) : Snapshot.ResourceVector option =
-        match e with
-        | ValueSome te ->
-            Some { metal = float te.Metal; energy = float te.Energy }
-        | ValueNone -> None
-
     let private snapshotFromView (view: RunningView) : Snapshot.GameStateSnapshot =
         let unitList = view.units |> Map.toList |> List.map snd
         let featureList = view.features |> Map.toList |> List.map snd
-        // Collapse the single-team economy into a synthetic player so the
-        // dashboard's per-player telemetry pane has something to show.
-        let players : Snapshot.PlayerTelemetry list =
-            match view.economy with
-            | Some r ->
-                [ { playerId = 0
-                    teamId = 0
-                    name = "host"
-                    resources = r
-                    unitCount = unitList.Length
-                    buildingCount = 0
-                    unitClassBreakdown = Map.empty
-                    economy = { income = { metal = 0.0; energy = 0.0 }; expenditure = { metal = 0.0; energy = 0.0 } }
-                    kills = 0
-                    losses = 0 } ]
-            | None -> []
         { sessionId = view.sessionId
           tick = view.lastFrame
           capturedAt = DateTimeOffset.UtcNow
-          players = players
+          // HighBar's StateSnapshot carries team economy but no player
+          // identity or complete PlayerTelemetry. Do not invent a "host"
+          // player or missing economy fields.
+          players = []
           units = unitList
           buildings = []
           features = featureList
@@ -360,55 +352,93 @@ module WireConvert =
         (view: RunningView)
         : RunningView * ApplyResult =
         let recvSeq = update.Seq
-        // Gap detection: only meaningful once we've seen at least one update.
-        // First update sets the running seq; subsequent gaps must skip ≥ 2.
-        if view.lastSeq > 0UL && recvSeq > view.lastSeq + 1UL then
-            { view with lastSeq = recvSeq }, Gap (view.lastSeq, recvSeq)
+        let previousSeq = view.lastSeq |> Option.defaultValue 0UL
+        let isOlderOrDuplicate =
+            view.lastSeq |> Option.exists (fun last -> recvSeq <= last)
+        if isOlderOrDuplicate then
+            view, KeepAliveOnly
         else
+            let hasGap =
+                // Subtraction is safe because stale/duplicate values were
+                // rejected above; unlike `last + 1`, this cannot overflow.
+                view.lastSeq
+                |> Option.exists (fun last -> recvSeq - last > 1UL)
             match update.Payload with
             | ValueSome (Highbar.V1.StateUpdate.Types.Payload.Snapshot ss) ->
-                let ownUnits =
-                    ss.OwnUnits
-                    |> Seq.map (fun ou -> ou.UnitId, ownUnitToCoreUnit ou)
-                let visibleEnemies =
-                    ss.VisibleEnemies
-                    |> Seq.map (fun eu -> eu.UnitId, enemyUnitToCoreUnit eu)
-                let units =
-                    Seq.append ownUnits visibleEnemies
-                    |> Map.ofSeq
-                let features =
-                    ss.MapFeatures
-                    |> Seq.map (fun mf -> mf.FeatureId, mapFeatureToCoreFeature mf)
-                    |> Map.ofSeq
-                let view' =
+                let collect (items: seq<'a>) (convert: 'a -> Result<'b, string>) : Result<'b list, string> =
+                    items
+                    |> Seq.fold (fun state item ->
+                        match state, convert item with
+                        | Ok values, Ok value -> Ok (value :: values)
+                        | Error e, _ -> Error e
+                        | _, Error e -> Error e) (Ok [])
+                    |> Result.map List.rev
+                let converted =
+                    match collect ss.OwnUnits ownUnitToCoreUnit,
+                          collect ss.VisibleEnemies enemyUnitToCoreUnit,
+                          collect ss.MapFeatures mapFeatureToCoreFeature with
+                    | Ok ownUnits, Ok enemies, Ok features ->
+                        Ok (ownUnits, enemies, features)
+                    | Error e, _, _
+                    | _, Error e, _
+                    | _, _, Error e -> Error e
+                match converted with
+                | Error detail ->
+                    let invalid =
+                        { view with
+                            lastSeq = Some recvSeq
+                            baselineValid = false }
+                    invalid, Invalidated (previousSeq, recvSeq, detail)
+                | Ok (ownUnits, enemies, features) ->
+                    let units =
+                        Seq.append ownUnits enemies
+                        |> Seq.map (fun unit -> unit.id, unit)
+                        |> Map.ofSeq
+                    let featureMap =
+                        features
+                        |> Seq.map (fun feature -> feature.id, feature)
+                        |> Map.ofSeq
+                    // A complete snapshot is a replacement baseline. It may
+                    // recover directly across a sequence jump because it does
+                    // not depend on the missing deltas.
+                    let view' =
+                        { view with
+                            lastSeq = Some recvSeq
+                            baselineValid = true
+                            units = units
+                            features = featureMap
+                            mapMeta = staticMapToCoreMapMeta ss.StaticMap
+                            lastFrame = int64 update.Frame }
+                    view', NewSnapshot (snapshotFromView view')
+            | _ when hasGap ->
+                let invalid =
                     { view with
-                        lastSeq = recvSeq
-                        units = units
-                        features = features
-                        mapMeta = staticMapToCoreMapMeta ss.StaticMap
-                        economy = teamEconomyToCoreResources ss.Economy
-                        lastFrame = int64 update.Frame }
-                view', NewSnapshot (snapshotFromView view')
-            | ValueSome (Highbar.V1.StateUpdate.Types.Payload.Delta _) ->
-                // Phase 3 partial: the running view does not currently fold
-                // individual delta events (research §2 lists 27 variants).
-                // Surface the latest tick + emit the current snapshot — the
-                // underlying broker dashboard does not regress, and the
-                // gap-free guarantee is preserved by the seq check above.
-                let view' = { view with lastSeq = recvSeq; lastFrame = int64 update.Frame }
-                view', NewSnapshot (snapshotFromView view')
-            | ValueSome (Highbar.V1.StateUpdate.Types.Payload.Keepalive _) ->
-                { view with lastSeq = recvSeq }, KeepAliveOnly
+                        lastSeq = Some recvSeq
+                        baselineValid = false }
+                invalid, Gap (previousSeq, recvSeq)
+            | ValueSome (Highbar.V1.StateUpdate.Types.Payload.Delta delta) when delta.Events.Count > 0 ->
+                let detail =
+                    if view.baselineValid then
+                        "nonempty StateDelta contains event arms the broker does not materialize"
+                    else
+                        "nonempty StateDelta received before a complete baseline"
+                let invalid =
+                    { view with
+                        lastSeq = Some recvSeq
+                        baselineValid = false }
+                invalid, Invalidated (previousSeq, recvSeq, detail)
+            | ValueSome (Highbar.V1.StateUpdate.Types.Payload.Delta _)
+            | ValueSome (Highbar.V1.StateUpdate.Types.Payload.Keepalive _)
             | ValueNone ->
-                { view with lastSeq = recvSeq }, KeepAliveOnly
+                { view with lastSeq = Some recvSeq }, KeepAliveOnly
 
     // --- Core → HighBar helpers ---
 
     let private vec2ToVec3 (v: Snapshot.Vec2) : Highbar.V1.Vector3 =
         let w = Highbar.V1.Vector3.empty()
         w.X <- v.x
-        w.Y <- v.y
-        w.Z <- 0.0f   // broker is 2D; engine treats z as ground height
+        w.Y <- 0.0f
+        w.Z <- v.y
         w
 
     let private commandBatch (seq: uint64) (targetUnitId: uint32) (commandId: Guid) (ais: Highbar.V1.AICommand list) : Highbar.V1.CommandBatch =

@@ -1,10 +1,11 @@
   C Broker.Protocol.WireConvert.ApplyResult.Gap(lastSeq:UInt64, receivedSeq:UInt64)
+  C Broker.Protocol.WireConvert.ApplyResult.Invalidated(lastSeq:UInt64, receivedSeq:UInt64, detail:String)
   C Broker.Protocol.WireConvert.ApplyResult.KeepAliveOnly()
   C Broker.Protocol.WireConvert.ApplyResult.NewSnapshot(Item:GameStateSnapshot)
-  F Broker.Protocol.WireConvert.RunningView.economy : FSharpOption<ResourceVector>
+  F Broker.Protocol.WireConvert.RunningView.baselineValid : Boolean
   F Broker.Protocol.WireConvert.RunningView.features : FSharpMap<UInt32,Feature>
   F Broker.Protocol.WireConvert.RunningView.lastFrame : Int64
-  F Broker.Protocol.WireConvert.RunningView.lastSeq : UInt64
+  F Broker.Protocol.WireConvert.RunningView.lastSeq : FSharpOption<UInt64>
   F Broker.Protocol.WireConvert.RunningView.mapMeta : FSharpOption<MapMeta>
   F Broker.Protocol.WireConvert.RunningView.sessionId : Guid
   F Broker.Protocol.WireConvert.RunningView.units : FSharpMap<UInt32,Unit>
@@ -12,6 +13,7 @@ M Broker.Protocol.WireConvert.applyHighBarStateUpdate(update:StateUpdate, view:R
 M Broker.Protocol.WireConvert.fromCoreSnapshot(snapshot:GameStateSnapshot) : GameStateSnapshot
 M Broker.Protocol.WireConvert.fromCoreVersion(version:Version) : ProtocolVersion
 M Broker.Protocol.WireConvert.get_emptyRunningView() : RunningView
+M Broker.Protocol.WireConvert.hasValidBaseline(view:RunningView) : Boolean
 M Broker.Protocol.WireConvert.lastSeq(view:RunningView) : UInt64
 M Broker.Protocol.WireConvert.toCoreCommand(msg:Command) : Command
 M Broker.Protocol.WireConvert.toCoreVersion(msg:ProtocolVersion) : Version

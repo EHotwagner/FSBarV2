@@ -87,6 +87,8 @@ let snapshotE2ETests =
                     match cur.Body with
                     | ValueSome (StateMsg.Types.Body.Snapshot snap) ->
                         received.Add(snap.Tick)
+                    | ValueSome (StateMsg.Types.Body.Validity _) ->
+                        () // additive pre-baseline metadata; synthetic snapshots follow
                     | other ->
                         failtestf "expected Snapshot, got %A" other
 
@@ -147,6 +149,7 @@ let snapshotE2ETests =
                                 "graceful coord close → ProxyDisconnected"
                             sawEnd <- true
                         | ValueSome (StateMsg.Types.Body.Snapshot _) -> ()    // earlier broadcast
+                        | ValueSome (StateMsg.Types.Body.Validity _) -> ()    // pre-baseline metadata
                         | other -> failtestf "unexpected StateMsg body: %A" other
                 Expect.isTrue (sawEnd || closed) "subscriber must see SessionEnd or stream close on graceful end"
             finally

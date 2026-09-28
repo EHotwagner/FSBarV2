@@ -9,6 +9,7 @@
   <ItemGroup>
     <Compile Include="VersionHandshakeTests.fs" />
     <Compile Include="CoordinatorTests.fs" />
+    <Compile Include="ValidityLoopbackTests.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

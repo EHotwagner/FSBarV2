@@ -2,6 +2,7 @@ module Broker.Tui.Tests.DashboardViewTests
 
 open System
 open System.IO
+open System.Text.RegularExpressions
 open Expecto
 open Spectre.Console
 open Broker.Core
@@ -243,6 +244,14 @@ let dashboardViewTests =
             let wrapped =
                 DashboardView.renderWithViz idleReading None
                 |> renderToText
-            Expect.equal plain wrapped "render and renderWithViz None agree"
+            // Each render samples the current time independently for the
+            // uptime row. Ignore that value so crossing a second boundary
+            // cannot make this layout-equivalence check intermittent.
+            let withoutUptimeValue text =
+                Regex.Replace(text, @"\d+:\d{2}:\d{2}", "<uptime>")
+            Expect.equal
+                (withoutUptimeValue plain)
+                (withoutUptimeValue wrapped)
+                "render and renderWithViz None agree"
         }
     ]

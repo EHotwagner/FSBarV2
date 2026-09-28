@@ -4,6 +4,22 @@ A minimal F# library scaffold that aligns with the fsharp-opinionated
 Speckit preset: `.fsi`-gated visibility, FSI-first workflow, FAKE-free
 verification via `dotnet test`.
 
+## Build prerequisites
+
+The F# protobuf generator is a repository-local .NET tool pinned in
+`.config/dotnet-tools.json`. `Broker.Contracts` restores that manifest before
+code generation and invokes it through `eng/protoc`; a separate global
+`protoc-gen-fsharp` installation is not required.
+
+## HighBar ground coordinates
+
+HighBar/Recoil positions use native `(X,Y,Z)`, where `Y` is elevation and the
+ground plane is `(X,Z)`. The legacy broker `Vec2` stores that ground plane as
+`(x,y) = (X,Z)`. Commands sent back to HighBar expand a legacy target to
+`(X,0,Z)`. The current two-dimensional broker model therefore discards
+observed elevation and cannot request nonzero target elevation; callers must
+not interpret its second coordinate as native `Y`.
+
 ## Use as a `dotnet new` template
 
 ```bash

@@ -40,15 +40,20 @@ module WireConvert =
     /// before any update has been applied.
     val lastSeq : view:RunningView -> uint64
 
+    /// True only after a complete HighBar snapshot has established a
+    /// baseline that has not subsequently been invalidated.
+    val hasValidBaseline : view:RunningView -> bool
+
     type ApplyResult =
         | NewSnapshot of Snapshot.GameStateSnapshot
         | Gap of lastSeq:uint64 * receivedSeq:uint64
+        | Invalidated of lastSeq:uint64 * receivedSeq:uint64 * detail:string
         | KeepAliveOnly
 
     /// Apply a HighBar `StateUpdate` (snapshot, delta, or keepalive) to
-    /// the running view and emit the resulting broker snapshot OR a gap
-    /// indication when `seq` skips. Sequence-gap surfacing is the
-    /// FR-013 enforcement point.
+    /// the running view. Only a complete snapshot emits broker state.
+    /// Sequence gaps and nonempty deltas that cannot be fully materialized
+    /// invalidate the baseline until a newer complete snapshot arrives.
     val applyHighBarStateUpdate :
         update:Highbar.V1.StateUpdate
         -> view:RunningView

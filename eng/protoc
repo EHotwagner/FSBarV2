@@ -1,0 +1,28 @@
+#!/bin/sh
+set -eu
+
+repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+nuget_root=${NUGET_PACKAGES:-"$HOME/.nuget/packages"}
+
+case "$(uname -s):$(uname -m)" in
+  Linux:x86_64) protoc_platform=linux_x64 ;;
+  Linux:i?86) protoc_platform=linux_x86 ;;
+  Darwin:x86_64) protoc_platform=macosx_x64 ;;
+  *)
+    echo "unsupported protoc host: $(uname -s) $(uname -m)" >&2
+    exit 1
+    ;;
+esac
+
+protoc="$nuget_root/grpc-fsharp.tools/0.2.0/tools/$protoc_platform/protoc"
+plugin="$repo_root/eng/protoc-gen-fsharp"
+
+if [ ! -x "$protoc" ]; then
+  echo "pinned protoc is missing; run dotnet restore first" >&2
+  exit 1
+fi
+
+exec "$protoc" \
+  "--plugin=protoc-gen-fsharp=$plugin" \
+  --experimental_allow_proto3_optional \
+  "$@"

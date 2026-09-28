@@ -11,6 +11,7 @@
   C Broker.Core.Audit.AuditEvent.CoordinatorNonOwnerRejected(at:DateTimeOffset, attemptedPluginId:String, ownerPluginId:String)
   C Broker.Core.Audit.AuditEvent.CoordinatorSchemaMismatch(at:DateTimeOffset, expected:String, received:String, pluginId:String)
   C Broker.Core.Audit.AuditEvent.CoordinatorStateGap(at:DateTimeOffset, pluginId:String, lastSeq:UInt64, receivedSeq:UInt64)
+  C Broker.Core.Audit.AuditEvent.CoordinatorStateInvalidated(at:DateTimeOffset, pluginId:String, lastSeq:UInt64, receivedSeq:UInt64, detail:String)
   C Broker.Core.Audit.AuditEvent.ModeChanged(at:DateTimeOffset, from':Mode, to':Mode)
   C Broker.Core.Audit.AuditEvent.NameInUseRejected(at:DateTimeOffset, attempted:String)
   C Broker.Core.Audit.AuditEvent.SessionEnded(at:DateTimeOffset, sessionId:Guid, reason:EndReason)

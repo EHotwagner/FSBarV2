@@ -93,6 +93,17 @@ module BrokerState =
         -> hub:Hub
         -> unit
 
+    /// Invalidate the current materialized baseline because an accepted
+    /// update could not be applied without inventing state.
+    val noteStateInvalidated :
+        pluginId:string
+        -> lastSeq:uint64
+        -> receivedSeq:uint64
+        -> detail:string
+        -> at:DateTimeOffset
+        -> hub:Hub
+        -> unit
+
     /// Lightweight liveness refresh — bumps `lastHeartbeatAt` without
     /// taking the owner-rule path or emitting an audit event. Called per
     /// inbound StateUpdate so the heartbeat watchdog does not false-trip
@@ -113,8 +124,23 @@ module BrokerState =
     /// (FR-013 dashboard badge).
     val telemetryGap : hub:Hub -> bool
 
-    /// Reset the gap badge — called by the dashboard renderer after the
-    /// stale tick has been shown.
+    /// True only while the cached session telemetry is backed by the most
+    /// recent complete, uninterrupted HighBar snapshot baseline.
+    val telemetryValid : hub:Hub -> bool
+
+    /// Atomically install a subscriber and enqueue its initial state. During
+    /// invalidity this enqueues explicit invalidation metadata instead of the
+    /// cached pre-gap snapshot.
+    val subscribeState :
+        client:ClientChannel
+        -> channel:Channel<StateMsg>
+        -> hub:Hub
+        -> unit
+
+    val unsubscribeState : client:ClientChannel -> hub:Hub -> unit
+
+    /// Clear a historical gap badge only when the current baseline is valid.
+    /// Invalid state can be cleared only by applying a complete snapshot.
     val clearTelemetryGap : hub:Hub -> unit
 
     val applySnapshot : snapshot:Snapshot.GameStateSnapshot -> hub:Hub -> unit
@@ -141,6 +167,16 @@ module BrokerState =
     /// dropped silently because the per-client queue's `QUEUE_FULL` reject
     /// already produced upstream feedback.
     val sendToCoordinator : command:CommandPipeline.Command -> hub:Hub -> unit
+
+    /// Atomically apply the scripting authority/backpressure checks and the
+    /// telemetry-validity fence, then forward accepted work to the active
+    /// coordinator channel. Invalidation cannot race between admission and
+    /// forwarding.
+    val admitScriptingCommand :
+        client:ClientChannel
+        -> command:CommandPipeline.Command
+        -> hub:Hub
+        -> BackpressureGate.CommandAck
 
     /// Register a new scripting client (FR-008). Fails with `NameInUse`
     /// when the name collides with another live client.

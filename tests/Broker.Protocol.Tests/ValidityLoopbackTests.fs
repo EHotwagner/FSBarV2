@@ -59,7 +59,7 @@ let private readNext (call: AsyncServerStreamingCall<StateMsg>) (token: Cancella
 [<Tests>]
 let validityLoopbackTests =
     testList "BARC-01 coordinator to scripting validity loopback" [
-        test "wire admission rejects malformed identities and ambiguous unit orders" {
+        test "wire admission accepts bounded distinct units and rejects malformed identities" {
             let mkCommand () =
                 let command = Command.empty()
                 command.CommandId <- Google.Protobuf.ByteString.CopyFrom(Guid.NewGuid().ToByteArray())
@@ -88,8 +88,13 @@ let validityLoopbackTests =
             gameplay.UnitOrder <- order
             command.Gameplay <- gameplay
             match WireConvert.tryToCoreCommand command with
+            | Ok { kind = CommandPipeline.Gameplay (CommandPipeline.UnitOrder ([1u; 2u], _, _, _)) } -> ()
+            | other -> failtestf "bounded distinct multi-unit command should decode atomically: %A" other
+
+            order.UnitIds.Add(2u)
+            match WireConvert.tryToCoreCommand command with
             | Error (CommandPipeline.InvalidPayload _) -> ()
-            | other -> failtestf "multi-unit command should reject: %A" other
+            | other -> failtestf "duplicate acting units should reject: %A" other
 
             let valid = mkCommand ()
             match WireConvert.tryToCoreCommand valid with

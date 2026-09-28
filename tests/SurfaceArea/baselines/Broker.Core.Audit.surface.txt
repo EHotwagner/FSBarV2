@@ -6,6 +6,7 @@
   C Broker.Core.Audit.AuditEvent.CoordinatorAttached(at:DateTimeOffset, pluginId:String, schemaVersion:String, engineSha256:String)
   C Broker.Core.Audit.AuditEvent.CoordinatorCommandChannelClosed(at:DateTimeOffset, pluginId:String, reason:String)
   C Broker.Core.Audit.AuditEvent.CoordinatorCommandChannelOpened(at:DateTimeOffset, pluginId:String)
+  C Broker.Core.Audit.AuditEvent.CoordinatorCommandDelivery(at:DateTimeOffset, sessionId:Guid, originatingClient:ScriptingClientId, parentCommandId:Guid, childIndex:Int32, childCount:Int32, actingUnit:UInt32, batchSeq:UInt64, correlation:UInt64, outcome:CoordinatorDeliveryOutcome, detail:String)
   C Broker.Core.Audit.AuditEvent.CoordinatorDetached(at:DateTimeOffset, pluginId:String, reason:String)
   C Broker.Core.Audit.AuditEvent.CoordinatorHeartbeat(at:DateTimeOffset, pluginId:String, frame:UInt32)
   C Broker.Core.Audit.AuditEvent.CoordinatorNonOwnerRejected(at:DateTimeOffset, attemptedPluginId:String, ownerPluginId:String)
@@ -16,5 +17,9 @@
   C Broker.Core.Audit.AuditEvent.NameInUseRejected(at:DateTimeOffset, attempted:String)
   C Broker.Core.Audit.AuditEvent.SessionEnded(at:DateTimeOffset, sessionId:Guid, reason:EndReason)
   C Broker.Core.Audit.AuditEvent.VersionMismatchRejected(at:DateTimeOffset, peerKind:String, peerVersion:Version)
+  C Broker.Core.Audit.CoordinatorDeliveryOutcome.NotAttempted()
+  C Broker.Core.Audit.CoordinatorDeliveryOutcome.Unknown()
+  C Broker.Core.Audit.CoordinatorDeliveryOutcome.WrittenToTransport()
 M Broker.Core.Audit.toLogTemplate(event:AuditEvent) : ValueTuple<String,Tuple`2[]>
 T Broker.Core.Audit.AuditEvent : union
+T Broker.Core.Audit.CoordinatorDeliveryOutcome : union

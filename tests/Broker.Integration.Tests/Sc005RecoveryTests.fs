@@ -96,10 +96,10 @@ let recoveryTests =
                     detects.Add(sw.ElapsedMilliseconds)
 
                     // 5. Recovery = broker back to Idle (proxyOutbound = None).
-                    let mutable recovered = BrokerState.coordinatorCommandChannel handle.Hub = None
+                    let mutable recovered = not (BrokerState.hasCoordinatorCommandChannel handle.Hub)
                     while not recovered && sw.ElapsedMilliseconds < recoverBudgetMs do
                         do! Task.Delay(50) |> Async.AwaitTask
-                        recovered <- BrokerState.coordinatorCommandChannel handle.Hub = None
+                        recovered <- not (BrokerState.hasCoordinatorCommandChannel handle.Hub)
                     recovers.Add(sw.ElapsedMilliseconds)
 
                     // 6. Cleanup the watcher so the next trial's name is free.

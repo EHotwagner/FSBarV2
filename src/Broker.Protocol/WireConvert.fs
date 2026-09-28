@@ -196,8 +196,9 @@ module WireConvert =
                 | ValueSome _ -> invalid "target position has non-finite coordinates"
                 | ValueNone -> Ok None
             match ids with
-            | [unitId] ->
-                validNativeId "unit id" unitId
+            | _ when ids.Length >= 1 && ids.Length <= 64 && (ids |> Set.ofList |> Set.count) = ids.Length ->
+                ids
+                |> List.fold (fun state unitId -> state |> Result.bind (fun () -> validNativeId "unit id" unitId)) (Ok ())
                 |> Result.bind (fun () -> toCoreOrderKind uo.Kind)
                 |> Result.bind (fun kind ->
                     targetPos |> Result.bind (fun pos ->
@@ -216,7 +217,8 @@ module WireConvert =
                                 Ok (CommandPipeline.UnitOrder (ids, kind, pos, targetUnit))
                             | _ -> invalid (sprintf "%A has missing or ambiguous target fields" kind))))
             | [] -> invalid "unit order has no acting unit"
-            | _ -> invalid "multi-unit order requires explicit per-unit expansion"
+            | _ when ids.Length > 64 -> invalid "unit order exceeds the 64 acting-unit limit"
+            | _ -> invalid "unit order acting units must be distinct"
         | ValueSome (GameplayPayload.Types.Body.Build bo) ->
             validNativeId "builder id" bo.BuilderId
             |> Result.bind (fun () -> validPosition "build position" bo.Pos)
@@ -487,20 +489,18 @@ module WireConvert =
         w.Z <- v.y
         w
 
-    let private commandBatch (seq: uint64) (targetUnitId: uint32) (commandId: Guid) (ais: Highbar.V1.AICommand list) : Highbar.V1.CommandBatch =
+    let private commandBatch (seq: uint64) (targetUnitId: uint32) (correlation: uint64) (ais: Highbar.V1.AICommand list) : Highbar.V1.CommandBatch =
         let cb = Highbar.V1.CommandBatch.empty()
         cb.BatchSeq <- seq
         cb.TargetUnitId <- targetUnitId
         for ai in ais do cb.Commands.Add(ai)
-        // ClientCommandId is a uint64 carrying the lower 64 bits of the UUID.
-        let bytes = commandId.ToByteArray()
-        let lower = System.BitConverter.ToUInt64(bytes, 0)
-        cb.ClientCommandId <- ValueSome lower
+        cb.ClientCommandId <- ValueSome correlation
         cb
 
     let private mapValidatedCoreCommandToHighBar
         (command: CommandPipeline.Command)
         (batchSeq: uint64)
+        (correlation: uint64)
         : Result<Highbar.V1.CommandBatch, CommandPipeline.RejectReason> =
         let firstUnit (ids: uint32 list) : int32 =
             match ids with
@@ -520,7 +520,7 @@ module WireConvert =
                 mu.ToPosition <- ValueSome (vec2ToVec3 pos)
                 let ai = Highbar.V1.AICommand.empty()
                 ai.MoveUnit <- mu
-                Ok (commandBatch batchSeq target command.commandId [ai])
+                Ok (commandBatch batchSeq target correlation [ai])
             | CommandPipeline.Move, _, None ->
                 Error (CommandPipeline.InvalidPayload "Move requires targetPos")
             | CommandPipeline.Attack, Some tid, _ ->
@@ -529,7 +529,7 @@ module WireConvert =
                 ac.TargetUnitId <- int tid
                 let ai = Highbar.V1.AICommand.empty()
                 ai.Attack <- ac
-                Ok (commandBatch batchSeq target command.commandId [ai])
+                Ok (commandBatch batchSeq target correlation [ai])
             | CommandPipeline.Attack, None, Some pos ->
                 let aa = Highbar.V1.AttackAreaCommand.empty()
                 aa.UnitId <- firstUnit uids
@@ -537,7 +537,7 @@ module WireConvert =
                 aa.Radius <- 64.0f   // broker default; tunable later
                 let ai = Highbar.V1.AICommand.empty()
                 ai.AttackArea <- aa
-                Ok (commandBatch batchSeq target command.commandId [ai])
+                Ok (commandBatch batchSeq target correlation [ai])
             | CommandPipeline.Attack, None, None ->
                 Error (CommandPipeline.InvalidPayload "Attack requires either targetUnitId or targetPos")
             | CommandPipeline.Stop, _, _ ->
@@ -545,21 +545,21 @@ module WireConvert =
                 s.UnitId <- firstUnit uids
                 let ai = Highbar.V1.AICommand.empty()
                 ai.Stop <- s
-                Ok (commandBatch batchSeq target command.commandId [ai])
+                Ok (commandBatch batchSeq target correlation [ai])
             | CommandPipeline.Guard, Some tid, None ->
                 let g = Highbar.V1.GuardCommand.empty()
                 g.UnitId <- firstUnit uids
                 g.GuardUnitId <- int tid
                 let ai = Highbar.V1.AICommand.empty()
                 ai.Guard <- g
-                Ok (commandBatch batchSeq target command.commandId [ai])
+                Ok (commandBatch batchSeq target correlation [ai])
             | CommandPipeline.Patrol, _, Some pos ->
                 let p = Highbar.V1.PatrolCommand.empty()
                 p.UnitId <- firstUnit uids
                 p.ToPosition <- ValueSome (vec2ToVec3 pos)
                 let ai = Highbar.V1.AICommand.empty()
                 ai.Patrol <- p
-                Ok (commandBatch batchSeq target command.commandId [ai])
+                Ok (commandBatch batchSeq target correlation [ai])
             | CommandPipeline.Patrol, _, None ->
                 Error (CommandPipeline.InvalidPayload "Patrol requires targetPos")
             | _ ->
@@ -575,7 +575,7 @@ module WireConvert =
             b.BuildPosition <- ValueSome (vec2ToVec3 pos)
             let ai = Highbar.V1.AICommand.empty()
             ai.BuildUnit <- b
-            Ok (commandBatch batchSeq builderId command.commandId [ai])
+            Ok (commandBatch batchSeq builderId correlation [ai])
         | CommandPipeline.Gameplay (CommandPipeline.Custom (_, blob)) ->
             let c = Highbar.V1.CustomCommand.empty()
             // CustomCommand.Params is RepeatedField<float32>; decode the
@@ -587,19 +587,19 @@ module WireConvert =
                 c.Params.Add(f)
             let ai = Highbar.V1.AICommand.empty()
             ai.Custom <- c
-            Ok (commandBatch batchSeq 0u command.commandId [ai])
+            Ok (commandBatch batchSeq 0u correlation [ai])
         | CommandPipeline.Admin CommandPipeline.Pause ->
             let p = Highbar.V1.PauseTeamCommand.empty()
             p.Enable <- true
             let ai = Highbar.V1.AICommand.empty()
             ai.PauseTeam <- p
-            Ok (commandBatch batchSeq 0u command.commandId [ai])
+            Ok (commandBatch batchSeq 0u correlation [ai])
         | CommandPipeline.Admin CommandPipeline.Resume ->
             let p = Highbar.V1.PauseTeamCommand.empty()
             p.Enable <- false
             let ai = Highbar.V1.AICommand.empty()
             ai.PauseTeam <- p
-            Ok (commandBatch batchSeq 0u command.commandId [ai])
+            Ok (commandBatch batchSeq 0u correlation [ai])
         | CommandPipeline.Admin (CommandPipeline.GrantResources (_, resources)) ->
             // GiveMeCommand is per-resource; emit two AICommands (metal + energy).
             let metalGm = Highbar.V1.GiveMeCommand.empty()
@@ -612,7 +612,7 @@ module WireConvert =
             aiM.GiveMe <- metalGm
             let aiE = Highbar.V1.AICommand.empty()
             aiE.GiveMe <- energyGm
-            Ok (commandBatch batchSeq 0u command.commandId [aiM; aiE])
+            Ok (commandBatch batchSeq 0u correlation [aiM; aiE])
         | CommandPipeline.Admin (CommandPipeline.SetSpeed _)
         | CommandPipeline.Admin (CommandPipeline.OverrideVision _)
         | CommandPipeline.Admin (CommandPipeline.OverrideVictory _) ->
@@ -661,4 +661,66 @@ module WireConvert =
                    && abs resources.energy <= float Single.MaxValue then Ok ()
                 else invalid "resource grant requires finite resources and the supported team target"
             | _ -> Ok ()
-        validateKind |> Result.bind (fun () -> mapValidatedCoreCommandToHighBar command batchSeq)
+        let bytes = command.commandId.ToByteArray()
+        let correlation = System.BitConverter.ToUInt64(bytes, 0)
+        validateKind |> Result.bind (fun () -> mapValidatedCoreCommandToHighBar command batchSeq correlation)
+
+    let tryExpandCoreCommandToHighBar
+        (command: CommandPipeline.Command)
+        (allocations: (uint64 * uint64) list)
+        : Result<Highbar.V1.CommandBatch list, CommandPipeline.RejectReason> =
+        let invalid detail = Error (CommandPipeline.InvalidPayload detail)
+        let expand commands =
+            if List.length commands <> List.length allocations then
+                invalid "wire allocation count does not match command expansion"
+            else
+                List.zip commands allocations
+                |> List.fold (fun state (child, (seq, correlation)) ->
+                    state
+                    |> Result.bind (fun batches ->
+                        mapValidatedCoreCommandToHighBar child seq correlation
+                        |> Result.map (fun batch -> batch :: batches))) (Ok [])
+                |> Result.map List.rev
+        match command.kind with
+        | CommandPipeline.Gameplay (CommandPipeline.UnitOrder (ids, kind, pos, targetId)) ->
+            if ids.Length < 1 || ids.Length > 64 then
+                invalid "unit order requires between 1 and 64 acting units"
+            elif (ids |> Set.ofList |> Set.count) <> ids.Length then
+                invalid "unit order acting units must be distinct"
+            else
+                let validateId id = validNativeId "unit id" id
+                let validation =
+                    ids
+                    |> List.fold (fun state id -> state |> Result.bind (fun () -> validateId id)) (Ok ())
+                    |> Result.bind (fun () ->
+                        match targetId with
+                        | Some id -> validNativeId "target unit id" id
+                        | None -> Ok ())
+                    |> Result.bind (fun () ->
+                        if pos |> Option.exists (fun p -> not (finite32 p.x && finite32 p.y)) then
+                            invalid "target position has non-finite coordinates"
+                        else
+                            match kind, pos, targetId with
+                            | CommandPipeline.Move, Some _, None
+                            | CommandPipeline.Patrol, Some _, None
+                            | CommandPipeline.Stop, None, None
+                            | CommandPipeline.Attack, Some _, None
+                            | CommandPipeline.Attack, None, Some _
+                            | CommandPipeline.Guard, None, Some _ -> Ok ()
+                            | _ -> invalid "unit order has missing or ambiguous target fields")
+                validation
+                |> Result.bind (fun () ->
+                    ids
+                    |> List.map (fun id ->
+                        { command with
+                            kind = CommandPipeline.Gameplay (CommandPipeline.UnitOrder ([id], kind, pos, targetId)) })
+                    |> expand)
+        | _ ->
+            match allocations with
+            | [seq, correlation] ->
+                // The existing converter remains the single-command validator;
+                // replace its UUID-derived correlation only after it succeeds.
+                tryFromCoreCommandToHighBar command seq
+                |> Result.bind (fun _ -> mapValidatedCoreCommandToHighBar command seq correlation)
+                |> Result.map List.singleton
+            | _ -> invalid "non-unit command requires exactly one wire allocation"

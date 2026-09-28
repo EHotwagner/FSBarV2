@@ -9,8 +9,29 @@ module BrokerState =
 
     type ClientChannel =
         { id: ScriptingClientId
-          queue: CommandPipeline.Queue
           mutable subscriber: Channel<StateMsg> option }
+
+    type OutboundDelivery =
+        { sessionId: Guid
+          parentCommandId: Guid
+          originatingClient: ScriptingClientId
+          batches: Highbar.V1.CommandBatch list }
+
+    type CoordinatorCommandLease =
+        { sessionId: Guid
+          leaseId: Guid
+          reader: ChannelReader<OutboundDelivery> }
+
+    type CoordinatorCommandClaim =
+        | NoCoordinator
+        | AlreadyClaimed
+        | Claimed of CoordinatorCommandLease
+
+    type CoordinatorOutbound =
+        { sessionId: Guid
+          leaseId: Guid
+          channel: Channel<OutboundDelivery>
+          mutable readerClaimed: bool }
 
     type SnapshotBroadcaster() =
         let observers = ResizeArray<IObserver<Snapshot.GameStateSnapshot>>()
@@ -39,7 +60,9 @@ module BrokerState =
           mutable mode: Mode.Mode
           mutable roster: ScriptingRoster.Roster
           mutable slots: ParticipantSlot.ParticipantSlot list
-          mutable coordinatorOutbound: Channel<CommandPipeline.Command> option
+          mutable coordinatorOutbound: CoordinatorOutbound option
+          mutable nextBatchSeq: uint64
+          mutable nextCorrelation: uint64
           mutable expectedSchemaVersion: string
           mutable ownerRule: OwnerRule
           mutable telemetryGap: bool
@@ -67,6 +90,8 @@ module BrokerState =
           roster = ScriptingRoster.empty
           slots = []
           coordinatorOutbound = None
+          nextBatchSeq = 1UL
+          nextCorrelation = 1UL
           expectedSchemaVersion = "1.0.0"
           ownerRule = FirstAttached
           telemetryGap = false
@@ -88,13 +113,16 @@ module BrokerState =
     let private withLock (hub: Hub) (f: unit -> 'a) : 'a =
         lock hub.stateLock f
 
-    let private newProxyOutbound capacity =
+    let private newProxyOutbound sessionId capacity =
         let opts =
             BoundedChannelOptions(capacity,
                 FullMode = BoundedChannelFullMode.Wait,
                 SingleReader = true,
                 SingleWriter = false)
-        Channel.CreateBounded<CommandPipeline.Command>(opts)
+        { sessionId = sessionId
+          leaseId = Guid.NewGuid()
+          channel = Channel.CreateBounded<OutboundDelivery>(opts)
+          readerClaimed = false }
 
     let openHostSession
         (config: Lobby.LobbyConfig)
@@ -171,6 +199,21 @@ module BrokerState =
                 ch.Writer.TryComplete() |> ignore
             | None -> ()
 
+    let private recordDeliveryOutcome (hub: Hub) (delivery: OutboundDelivery) index outcome detail =
+        let batch = delivery.batches[index]
+        let correlation = batch.ClientCommandId |> ValueOption.defaultValue 0UL
+        hub.auditEmitter
+            (Audit.AuditEvent.CoordinatorCommandDelivery
+                (DateTimeOffset.UtcNow, delivery.sessionId, delivery.originatingClient,
+                 delivery.parentCommandId, index, delivery.batches.Length, batch.TargetUnitId,
+                 batch.BatchSeq, correlation, outcome, detail))
+
+    let private discardQueuedDeliveries (hub: Hub) (outbound: CoordinatorOutbound) detail =
+        let mutable delivery = Unchecked.defaultof<OutboundDelivery>
+        while outbound.channel.Reader.TryRead(&delivery) do
+            delivery.batches
+            |> List.iteri (fun index _ -> recordDeliveryOutcome hub delivery index Audit.NotAttempted detail)
+
     let closeSession (reason: Session.EndReason) (at: DateTimeOffset) (hub: Hub) : unit =
         withLock hub (fun () ->
             match hub.session with
@@ -182,7 +225,13 @@ module BrokerState =
                 hub.session <- None
                 hub.mode <- Mode.Mode.Idle
                 hub.slots <- []
+                hub.coordinatorOutbound
+                |> Option.iter (fun outbound ->
+                    outbound.channel.Writer.TryComplete() |> ignore
+                    discardQueuedDeliveries hub outbound "session closed before transport write")
                 hub.coordinatorOutbound <- None
+                hub.nextBatchSeq <- 1UL
+                hub.nextCorrelation <- 1UL
                 hub.activePluginId <- None
                 hub.lastHeartbeatAt <- DateTimeOffset.MinValue
                 hub.telemetryGap <- false
@@ -206,7 +255,14 @@ module BrokerState =
                 let prevMode = hub.mode
                 hub.session <- Some newSession
                 hub.mode <- mode
-                hub.coordinatorOutbound <- Some (newProxyOutbound hub.commandQueueCapacity)
+                hub.coordinatorOutbound
+                |> Option.iter (fun outbound ->
+                    outbound.channel.Writer.TryComplete() |> ignore
+                    discardQueuedDeliveries hub outbound "coordinator session was replaced before transport write")
+                let sessionId = Session.id newSession
+                hub.coordinatorOutbound <- Some (newProxyOutbound sessionId hub.commandQueueCapacity)
+                hub.nextBatchSeq <- 1UL
+                hub.nextCorrelation <- 1UL
                 if prevMode <> hub.mode then
                     hub.auditEmitter (Audit.AuditEvent.ModeChanged (link.attachedAt, prevMode, hub.mode))
                 Ok ())
@@ -253,12 +309,102 @@ module BrokerState =
                 hub.session <- Some (Session.stepSpeed delta s)
                 Ok ())
 
-    let coordinatorCommandChannel (hub: Hub) = hub.coordinatorOutbound
+    let tryClaimCoordinatorCommandChannel (hub: Hub) =
+        withLock hub (fun () ->
+            match hub.coordinatorOutbound with
+            | Some outbound when not outbound.readerClaimed ->
+                outbound.readerClaimed <- true
+                Claimed { sessionId = outbound.sessionId; leaseId = outbound.leaseId; reader = outbound.channel.Reader }
+            | Some _ -> AlreadyClaimed
+            | None -> NoCoordinator)
 
-    let sendToCoordinator (command: CommandPipeline.Command) (hub: Hub) : unit =
-        match hub.coordinatorOutbound with
-        | Some ch -> ch.Writer.TryWrite(command) |> ignore
-        | None -> ()
+    let hasCoordinatorCommandChannel (hub: Hub) =
+        withLock hub (fun () -> hub.coordinatorOutbound.IsSome)
+
+    let ensureCoordinatorCommandChannel (hub: Hub) =
+        withLock hub (fun () ->
+            match hub.coordinatorOutbound, hub.session, hub.activePluginId with
+            | Some _, _, _ -> true
+            | None, Some session, Some _ ->
+                hub.coordinatorOutbound <-
+                    Some (newProxyOutbound (Session.id session) hub.commandQueueCapacity)
+                true
+            | _ -> false)
+
+    let closeCoordinatorCommandChannel leaseId reason (hub: Hub) =
+        withLock hub (fun () ->
+            match hub.coordinatorOutbound with
+            | Some outbound when outbound.leaseId = leaseId ->
+                outbound.channel.Writer.TryComplete() |> ignore
+                discardQueuedDeliveries hub outbound reason
+                hub.coordinatorOutbound <- None
+            | _ -> ())
+
+    let completeCoordinatorCommandChannel sessionId reason (hub: Hub) =
+        withLock hub (fun () ->
+            match hub.coordinatorOutbound with
+            | Some outbound when outbound.sessionId = sessionId ->
+                outbound.channel.Writer.TryComplete() |> ignore
+                discardQueuedDeliveries hub outbound reason
+                hub.coordinatorOutbound <- None
+            | _ -> ())
+
+    let isCurrentDelivery (delivery: OutboundDelivery) (hub: Hub) : bool =
+        withLock hub (fun () ->
+            hub.session
+            |> Option.exists (fun session -> Session.id session = delivery.sessionId)
+            && hub.coordinatorOutbound
+               |> Option.exists (fun outbound -> outbound.sessionId = delivery.sessionId))
+
+    let private expansionCount (command: CommandPipeline.Command) =
+        match command.kind with
+        | CommandPipeline.Gameplay (CommandPipeline.UnitOrder (ids, _, _, _)) -> ids.Length
+        | _ -> 1
+
+    let private admitOutboundLocked (command: CommandPipeline.Command) (hub: Hub) =
+        match hub.session, hub.coordinatorOutbound with
+        | Some session, Some outbound ->
+            let count = expansionCount command
+            let dummy = [ for i in 1 .. count -> uint64 i, uint64 i ]
+            match WireConvert.tryExpandCoreCommandToHighBar command dummy with
+            | Error reason -> Error reason
+            // Keep one representable successor so advancing the reservation
+            // cursor can never wrap to zero after a successful enqueue.
+            | Ok _ when count > 0 &&
+                        (hub.nextBatchSeq > UInt64.MaxValue - uint64 count ||
+                         hub.nextCorrelation > UInt64.MaxValue - uint64 count) ->
+                Error (CommandPipeline.InvalidPayload "coordinator child identity space is exhausted")
+            | Ok _ ->
+                let sessionId = Session.id session
+                let allocations =
+                    [ for index in 0 .. count - 1 ->
+                        hub.nextBatchSeq + uint64 index,
+                        hub.nextCorrelation + uint64 index ]
+                match WireConvert.tryExpandCoreCommandToHighBar command allocations with
+                | Error reason -> Error reason
+                | Ok batches ->
+                    let delivery =
+                        { sessionId = sessionId
+                          parentCommandId = command.commandId
+                          originatingClient = command.originatingClient
+                          batches = batches }
+                    if outbound.channel.Writer.TryWrite delivery then
+                        hub.nextBatchSeq <- hub.nextBatchSeq + uint64 count
+                        hub.nextCorrelation <- hub.nextCorrelation + uint64 count
+                        Ok ()
+                    else
+                        Error CommandPipeline.QueueFull
+        | _ -> Error (CommandPipeline.InvalidPayload "no active coordinator command channel")
+
+    let sendToCoordinator (command: CommandPipeline.Command) (hub: Hub) =
+        let result = withLock hub (fun () -> admitOutboundLocked command hub)
+        match result with
+        | Ok () -> ()
+        | Error reason ->
+            hub.auditEmitter
+                (Audit.AuditEvent.CommandRejected
+                    (DateTimeOffset.UtcNow, command.originatingClient, command.commandId, reason))
+        result
 
     let admitScriptingCommand
         (client: ClientChannel)
@@ -266,27 +412,22 @@ module BrokerState =
         (hub: Hub)
         : BackpressureGate.CommandAck =
         withLock hub (fun () ->
-            if hub.telemetryGap then
+            if not hub.telemetryValid then
                 { commandId = command.commandId
                   accepted = false
                   reject =
                     Some (
                         CommandPipeline.InvalidPayload
-                            "telemetry baseline is invalid; wait for a complete snapshot") }
+                            "telemetry baseline is invalid or missing; wait for a complete snapshot") }
             else
-                let gate = BackpressureGate.create client.queue
-                let result =
-                    BackpressureGate.process_
-                        gate
-                        hub.mode
-                        hub.roster
-                        hub.slots
-                        command
-                if result.accepted then
-                    match hub.coordinatorOutbound with
-                    | Some channel -> channel.Writer.TryWrite(command) |> ignore
-                    | None -> ()
-                result)
+                match CommandPipeline.authorise hub.mode hub.roster hub.slots command with
+                | Error reason ->
+                    { commandId = command.commandId; accepted = false; reject = Some reason }
+                | Ok () ->
+                    match admitOutboundLocked command hub with
+                    | Ok () -> { commandId = command.commandId; accepted = true; reject = None }
+                    | Error reason ->
+                        { commandId = command.commandId; accepted = false; reject = Some reason })
 
     let expectedSchemaVersion (hub: Hub) = hub.expectedSchemaVersion
     let setExpectedSchemaVersion (v: string) (hub: Hub) : unit =
@@ -471,7 +612,6 @@ module BrokerState =
                 hub.roster <- newRoster
                 let channel : ClientChannel =
                     { id = id
-                      queue = CommandPipeline.createQueue hub.commandQueueCapacity
                       subscriber = None }
                 hub.clients[id] <- channel
                 hub.auditEmitter (Audit.AuditEvent.ClientConnected (at, id, peerVersion))
@@ -595,7 +735,7 @@ module BrokerState =
                           targetSlot = None
                           kind = kind
                           submittedAt = nowDt }
-                    sendToCoordinator cmd hub
+                    sendToCoordinator cmd hub |> ignore
                 | Error _ -> ()
                 r
             member _.OperatorStepSpeed(delta) =
@@ -613,10 +753,7 @@ module BrokerState =
                           targetSlot = None
                           kind = CommandPipeline.Admin (CommandPipeline.SetSpeed delta)
                           submittedAt = DateTimeOffset.UtcNow }
-                    // sendToCoordinator silently drops if no link; that's fine.
-                    // Audit emission for AdminNotAvailable happens at the
-                    // OpenCommandChannel drain in HighBarCoordinatorService.
-                    sendToCoordinator cmd hub
+                    sendToCoordinator cmd hub |> ignore
                 | Error _ -> ()
                 r
             member _.OperatorEndSession() =

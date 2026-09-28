@@ -7,14 +7,29 @@ open FSBarV2.Broker.Contracts
 
 module BrokerState =
 
-    /// Per-client protocol-edge state. Holds the bounded command queue
-    /// (FR-010) and, while the client is subscribed to state, an
-    /// outbound channel that the server-streaming `SubscribeState` RPC
-    /// drains and writes to the wire.
+    /// Per-client protocol-edge state. Command admission is owned by the
+    /// single bounded coordinator queue; this record retains only client
+    /// identity and optional state subscription.
     type ClientChannel =
         { id: ScriptingClientId
-          queue: CommandPipeline.Queue
           mutable subscriber: Channel<StateMsg> option }
+
+    type OutboundDelivery =
+        { sessionId: Guid
+          parentCommandId: Guid
+          originatingClient: ScriptingClientId
+          batches: Highbar.V1.CommandBatch list }
+
+    /// Single-reader lease over one immutable coordinator session channel.
+    type CoordinatorCommandLease =
+        { sessionId: Guid
+          leaseId: Guid
+          reader: ChannelReader<OutboundDelivery> }
+
+    type CoordinatorCommandClaim =
+        | NoCoordinator
+        | AlreadyClaimed
+        | Claimed of CoordinatorCommandLease
 
     /// In-process broker state. Owned by `Broker.App.Program` and shared
     /// across the two gRPC services + the TUI. All mutation is single-
@@ -156,17 +171,33 @@ module BrokerState =
     /// Adjust active-session speed by `delta`. No-op when no session.
     val stepSpeed : delta:decimal -> hub:Hub -> Result<unit, string>
 
-    /// Channel of Core `Command`s the coordinator's `OpenCommandChannel`
-    /// handler drains and writes outbound (after converting via
-    /// `WireConvert.tryFromCoreCommandToHighBar`). None when no coordinator
-    /// is currently attached.
-    val coordinatorCommandChannel : hub:Hub -> Channel<CommandPipeline.Command> option
+    /// Channel of fully validated, atomically admitted parent deliveries.
+    /// None when no coordinator is currently attached.
+    /// Claim the current session's outbound reader exactly once. A lease
+    /// never follows a later replacement session.
+    val tryClaimCoordinatorCommandChannel : hub:Hub -> CoordinatorCommandClaim
 
-    /// Append a Core `Command` to the coordinator outbound channel. No-op
-    /// when no coordinator is attached — commands with nowhere to go are
-    /// dropped silently because the per-client queue's `QUEUE_FULL` reject
-    /// already produced upstream feedback.
-    val sendToCoordinator : command:CommandPipeline.Command -> hub:Hub -> unit
+    val hasCoordinatorCommandChannel : hub:Hub -> bool
+
+    /// Recreate an empty command channel for the current live coordinator
+    /// session after its prior reader exited. Sequence/correlation cursors
+    /// remain monotonic for the session.
+    val ensureCoordinatorCommandChannel : hub:Hub -> bool
+
+    /// Close and drain only the matching session's outbound command path.
+    /// Every still-queued child is recorded NotAttempted.
+    val closeCoordinatorCommandChannel : leaseId:Guid -> reason:string -> hub:Hub -> unit
+
+    /// Complete the current session channel regardless of its lease owner.
+    /// Used by session lifecycle code; stale reader cleanup uses leaseId.
+    val completeCoordinatorCommandChannel : sessionId:Guid -> reason:string -> hub:Hub -> unit
+
+    /// True only while this delivery still belongs to the live session.
+    val isCurrentDelivery : delivery:OutboundDelivery -> hub:Hub -> bool
+
+    /// Validate, expand and atomically admit a Core command. Refuses when
+    /// there is no live coordinator or the bounded parent queue is full.
+    val sendToCoordinator : command:CommandPipeline.Command -> hub:Hub -> Result<unit, CommandPipeline.RejectReason>
 
     /// Atomically apply the scripting authority/backpressure checks and the
     /// telemetry-validity fence, then forward accepted work to the active

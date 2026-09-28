@@ -51,6 +51,26 @@ let private waitFor (cond: unit -> bool) (timeoutMs: int) : bool =
         ok <- cond()
     ok
 
+let private heartbeat (client: HighBarCoordinator.HighBarCoordinatorClient) pluginId =
+    let request = HeartbeatRequest.empty()
+    request.PluginId <- pluginId
+    request.SchemaVersion <- "1.0.0"
+    request.Frame <- 0u
+    client.HeartbeatAsync(request).ResponseAsync
+
+let private openCommandStream (client: HighBarCoordinator.HighBarCoordinatorClient) pluginId token =
+    let request = CommandChannelSubscribe.empty()
+    request.PluginId <- pluginId
+    client.OpenCommandChannelAsync(request, cancellationToken = token)
+
+let private openedCount (audit: ConcurrentQueue<Audit.AuditEvent>) =
+    audit.ToArray()
+    |> Array.sumBy (function Audit.CoordinatorCommandChannelOpened _ -> 1 | _ -> 0)
+
+let private closedCount (audit: ConcurrentQueue<Audit.AuditEvent>) =
+    audit.ToArray()
+    |> Array.sumBy (function Audit.CoordinatorCommandChannelClosed _ -> 1 | _ -> 0)
+
 let private mkMoveCommandWire (clientName: string) (unitId: uint32) (x: float32) (y: float32) =
     let cmd = FSBarV2.Broker.Contracts.Command.empty()
     cmd.CommandId <- Google.Protobuf.ByteString.CopyFrom((Guid.NewGuid()).ToByteArray())
@@ -107,7 +127,7 @@ let coordinatorCommandTests =
                             (CommandPipeline.UnitOrder
                                 ([99u], CommandPipeline.Move, Some { x = 50.0f; y = 75.0f }, None))
                       submittedAt = DateTimeOffset.UtcNow }
-                BrokerState.sendToCoordinator moveCmd handle.Hub
+                BrokerState.sendToCoordinator moveCmd handle.Hub |> ignore
 
                 // --- Drain OpenCommandChannel; verify both arrived.
                 let stream =
@@ -143,6 +163,127 @@ let coordinatorCommandTests =
                          | Audit.AuditEvent.CoordinatorCommandChannelOpened _ -> true
                          | _ -> false))
                     "CoordinatorCommandChannelOpened audit"
+            finally
+                (handle :> IAsyncDisposable).DisposeAsync().AsTask().Wait()
+        }
+
+        testAsync "BARC-01.1e scripting ACK admits one atomic parent and emits ordered child batches" {
+            let port = freePort()
+            let handle, _ = startServerWithAudit port
+            try
+                use channel = channelFor port
+                let scripting = ScriptingClient.ScriptingClientClient(channel)
+                let clientId = ScriptingClientId "multi-bot"
+                let lobby : Lobby.LobbyConfig =
+                    { mapName = "Tabula"
+                      gameMode = "Skirmish"
+                      participants =
+                        [ { slotIndex = 1; kind = ParticipantSlot.ProxyAi; team = 0; boundClient = Some clientId } ]
+                      display = Lobby.Headless }
+                BrokerState.openHostSession lobby DateTimeOffset.UtcNow handle.Hub
+                |> function Ok () -> () | Error error -> failtest error
+                let! _ = scripting.HelloAsync(mkHello "multi-bot").ResponseAsync |> Async.AwaitTask
+                BrokerState.launchHostSession DateTimeOffset.UtcNow handle.Hub
+                |> function Ok () -> () | Error error -> failtest error
+                let! coordinator = SyntheticCoordinator.connect channel "multi-coordinator" "1.0.0" |> Async.AwaitTask
+                use _ = coordinator
+
+                use submit = scripting.SubmitCommandsAsync()
+                let command = mkMoveCommandWire "multi-bot" 8u 17.0f 19.0f
+                command.TargetSlot <- 1
+                let order = command.Gameplay.UnitOrder
+                order.UnitIds.Add(2u)
+                order.UnitIds.Add(5u)
+                do! submit.RequestStream.WriteAsync(command) |> Async.AwaitTask
+                use timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5.0))
+                let! hasAck = submit.ResponseStream.MoveNext(timeout.Token) |> Async.AwaitTask
+                Expect.isTrue hasAck "command acknowledgement returned"
+                Expect.isFalse submit.ResponseStream.Current.Accepted "pre-baseline parent is refused atomically"
+                match submit.ResponseStream.Current.Reject with
+                | ValueSome reject -> Expect.stringContains reject.Detail "baseline is invalid or missing" "initial validity fence"
+                | ValueNone -> failtest "pre-baseline refusal detail missing"
+
+                let sessionId = BrokerState.session handle.Hub |> Option.map Session.id |> Option.get
+                BrokerState.applySnapshot
+                    { sessionId = sessionId; tick = 1L; capturedAt = DateTimeOffset.UtcNow
+                      players = []; units = []; buildings = []; features = []; mapMeta = None }
+                    handle.Hub
+                do! submit.RequestStream.WriteAsync(command) |> Async.AwaitTask
+                let! hasAcceptedAck = submit.ResponseStream.MoveNext(timeout.Token) |> Async.AwaitTask
+                Expect.isTrue hasAcceptedAck "post-baseline acknowledgement returned"
+                Expect.isTrue submit.ResponseStream.Current.Accepted "whole parent was admitted after baseline"
+
+                let stream = coordinator.CommandStream |> Option.defaultWith (fun () -> failtest "command stream missing")
+                let received = ResizeArray<CommandBatch>()
+                while received.Count < 3 do
+                    let! more = stream.MoveNext(timeout.Token) |> Async.AwaitTask
+                    if not more then failtest "command stream closed before every child"
+                    received.Add stream.Current
+                Expect.sequenceEqual (received |> Seq.map _.TargetUnitId) [8u; 2u; 5u] "one ordered batch per acting unit"
+                Expect.equal (received |> Seq.map _.BatchSeq |> Set.ofSeq |> Set.count) 3 "child sequences are distinct"
+                Expect.equal
+                    (received |> Seq.map (fun batch -> batch.ClientCommandId |> ValueOption.defaultValue 0UL) |> Set.ofSeq |> Set.count)
+                    3
+                    "child correlations are distinct"
+            finally
+                (handle :> IAsyncDisposable).DisposeAsync().AsTask().Wait()
+        }
+
+        testAsync "idle command RPC cancellation releases its lease and a replacement carries commands" {
+            let port = freePort()
+            let handle, audit = startServerWithAudit port
+            try
+                use channel = channelFor port
+                let client = HighBarCoordinator.HighBarCoordinatorClient(channel)
+                let! _ = heartbeat client "cancel-reconnect" |> Async.AwaitTask
+                use firstCts = new CancellationTokenSource()
+                use first = openCommandStream client "cancel-reconnect" firstCts.Token
+                Expect.isTrue (waitFor (fun () -> openedCount audit = 1) 2000) "first reader acquired its lease"
+                firstCts.Cancel()
+                Expect.isTrue
+                    (waitFor (fun () -> closedCount audit = 1 && not (BrokerState.hasCoordinatorCommandChannel handle.Hub)) 2000)
+                    "idle cancellation closed and drained the claimed channel"
+
+                use secondCts = new CancellationTokenSource(TimeSpan.FromSeconds(5.0))
+                use second = openCommandStream client "cancel-reconnect" secondCts.Token
+                Expect.isTrue (waitFor (fun () -> openedCount audit = 2) 2000) "replacement reader acquired a fresh channel"
+                let command : CommandPipeline.Command =
+                    { commandId = Guid.NewGuid(); originatingClient = ScriptingClientId "operator"
+                      targetSlot = None; kind = CommandPipeline.Admin CommandPipeline.Pause
+                      submittedAt = DateTimeOffset.UtcNow }
+                Expect.equal (BrokerState.sendToCoordinator command handle.Hub) (Ok ()) "replacement command admitted"
+                let! more = second.ResponseStream.MoveNext(secondCts.Token) |> Async.AwaitTask
+                Expect.isTrue more "replacement stream received a batch"
+                Expect.equal second.ResponseStream.Current.BatchSeq 1UL "first session sequence was retained across reader renewal"
+            finally
+                (handle :> IAsyncDisposable).DisposeAsync().AsTask().Wait()
+        }
+
+        testAsync "normal command channel completion permits a fresh reader in the live session" {
+            let port = freePort()
+            let handle, audit = startServerWithAudit port
+            try
+                use channel = channelFor port
+                let client = HighBarCoordinator.HighBarCoordinatorClient(channel)
+                let! _ = heartbeat client "normal-reconnect" |> Async.AwaitTask
+                use firstCts = new CancellationTokenSource(TimeSpan.FromSeconds(5.0))
+                use first = openCommandStream client "normal-reconnect" firstCts.Token
+                Expect.isTrue (waitFor (fun () -> openedCount audit = 1) 2000) "first reader acquired its lease"
+                let sessionId = BrokerState.session handle.Hub |> Option.map Session.id |> Option.get
+                BrokerState.completeCoordinatorCommandChannel sessionId "fixture normal completion" handle.Hub
+                Expect.isTrue (waitFor (fun () -> closedCount audit = 1) 2000) "server observed normal channel completion"
+
+                use secondCts = new CancellationTokenSource(TimeSpan.FromSeconds(5.0))
+                use second = openCommandStream client "normal-reconnect" secondCts.Token
+                Expect.isTrue (waitFor (fun () -> openedCount audit = 2) 2000) "fresh reader renewed the live session channel"
+                let command : CommandPipeline.Command =
+                    { commandId = Guid.NewGuid(); originatingClient = ScriptingClientId "operator"
+                      targetSlot = None; kind = CommandPipeline.Admin CommandPipeline.Resume
+                      submittedAt = DateTimeOffset.UtcNow }
+                Expect.equal (BrokerState.sendToCoordinator command handle.Hub) (Ok ()) "command admitted after normal renewal"
+                let! more = second.ResponseStream.MoveNext(secondCts.Token) |> Async.AwaitTask
+                Expect.isTrue more "renewed stream received a batch"
+                Expect.equal second.ResponseStream.Current.BatchSeq 1UL "session cursor did not skip on empty channel renewal"
             finally
                 (handle :> IAsyncDisposable).DisposeAsync().AsTask().Wait()
         }

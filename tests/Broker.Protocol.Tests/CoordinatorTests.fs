@@ -2,6 +2,8 @@ module Broker.Protocol.Tests.CoordinatorTests
 
 open System
 open System.Collections.Concurrent
+open System.Threading
+open System.Threading.Tasks
 open Expecto
 open Broker.Core
 open Broker.Protocol
@@ -414,8 +416,8 @@ let commandTranslationTests =
             | other -> failtestf "expected InvalidPayload, got %A" other
         }
 
-        test "multi-unit order and invalid native identifiers reject before mapping" {
-            for ids in [ []; [1u; 2u]; [UInt32.MaxValue] ] do
+        test "empty order and invalid native identifiers reject before mapping" {
+            for ids in [ []; [UInt32.MaxValue] ] do
                 let cmd =
                     mkCoreCommand
                         (CommandPipeline.Gameplay
@@ -423,6 +425,37 @@ let commandTranslationTests =
                 match WireConvert.tryFromCoreCommandToHighBar cmd 8UL with
                 | Error (CommandPipeline.InvalidPayload _) -> ()
                 | other -> failtestf "expected InvalidPayload for %A, got %A" ids other
+        }
+
+        test "multi-unit expansion is ordered, distinct and all-or-nothing" {
+            let cmd =
+                mkCoreCommand
+                    (CommandPipeline.Gameplay
+                        (CommandPipeline.UnitOrder
+                            ([9u; 3u; 7u], CommandPipeline.Guard, None, Some 42u)))
+            match WireConvert.tryExpandCoreCommandToHighBar cmd [101UL, 201UL; 102UL, 202UL; 103UL, 203UL] with
+            | Error reason -> failtestf "unexpected reject: %A" reason
+            | Ok batches ->
+                Expect.sequenceEqual (batches |> List.map _.TargetUnitId) [9u; 3u; 7u] "acting-unit order is preserved"
+                Expect.sequenceEqual (batches |> List.map _.BatchSeq) [101UL; 102UL; 103UL] "reserved sequences are preserved"
+                Expect.sequenceEqual
+                    (batches |> List.map (fun batch -> batch.ClientCommandId |> ValueOption.defaultValue 0UL))
+                    [201UL; 202UL; 203UL]
+                    "per-child correlations are preserved"
+                for batch in batches do
+                    match (firstAi batch).Command with
+                    | ValueSome (AICommand.Types.Command.Guard guard) ->
+                        Expect.equal guard.GuardUnitId 42 "Guard target survives every expansion"
+                    | other -> failtestf "expected Guard, got %A" other
+
+            for ids in [ [1u; 1u]; [1u .. 65u] ] do
+                let invalid =
+                    { cmd with
+                        kind = CommandPipeline.Gameplay (CommandPipeline.UnitOrder (ids, CommandPipeline.Move, Some { x = 1.0f; y = 2.0f }, None)) }
+                let allocations = ids |> List.mapi (fun i _ -> uint64 (i + 1), uint64 (i + 100))
+                match WireConvert.tryExpandCoreCommandToHighBar invalid allocations with
+                | Error (CommandPipeline.InvalidPayload _) -> ()
+                | other -> failtestf "expected atomic validation refusal for %A, got %A" ids other
         }
 
         test "nonnumeric build definition and non-finite position reject" {
@@ -530,5 +563,298 @@ let commandTranslationTests =
                 | ValueSome got -> Expect.equal got expected "client_command_id matches lower-64"
                 | ValueNone -> failtest "expected ClientCommandId set"
             | Error r -> failtestf "unexpected reject: %A" r
+        }
+    ]
+
+[<Tests>]
+let outboundDeliveryTests =
+    testList "bounded atomic coordinator delivery (BARC-01.1e)" [
+        test "one bounded admission expands a parent and rejects overflow without partial enqueue" {
+            let hub = BrokerState.create (System.Version(1, 0)) 1 ignore
+            let link : Session.ProxyAiLink =
+                { attachedAt = DateTimeOffset.UtcNow
+                  protocolVersion = System.Version(1, 0)
+                  lastSnapshotAt = None
+                  keepAliveIntervalMs = 5000
+                  pluginId = "delivery-test"
+                  schemaVersion = "1.0.0"
+                  engineSha256 = "test"
+                  lastHeartbeatAt = DateTimeOffset.UtcNow
+                  lastSeq = 0UL }
+            Expect.equal (BrokerState.attachCoordinator link hub) (Ok ()) "coordinator attached"
+            let parent =
+                mkCoreCommand
+                    (CommandPipeline.Gameplay
+                        (CommandPipeline.UnitOrder
+                            ([8u; 2u; 5u], CommandPipeline.Move, Some { x = 11.0f; y = 13.0f }, None)))
+            Expect.equal (BrokerState.sendToCoordinator parent hub) (Ok ()) "whole parent admitted"
+            let overflow = { parent with commandId = Guid.NewGuid() }
+            Expect.equal (BrokerState.sendToCoordinator overflow hub) (Error CommandPipeline.QueueFull) "full outbound queue rejects the whole second parent"
+            let reader =
+                match BrokerState.tryClaimCoordinatorCommandChannel hub with
+                | BrokerState.Claimed lease -> lease.reader
+                | other -> failtestf "expected reader lease, got %A" other
+            let mutable delivery = Unchecked.defaultof<BrokerState.OutboundDelivery>
+            Expect.isTrue (reader.TryRead(&delivery)) "one parent envelope was queued"
+            Expect.equal delivery.parentCommandId parent.commandId "full parent UUID is retained"
+            Expect.equal delivery.batches.Length 3 "one batch per acting unit"
+            Expect.sequenceEqual (delivery.batches |> List.map _.TargetUnitId) [8u; 2u; 5u] "batch order"
+            Expect.equal
+                (delivery.batches |> List.map (fun batch -> batch.ClientCommandId |> ValueOption.defaultValue 0UL) |> Set.ofList |> Set.count)
+                3
+                "child correlations are collision-free"
+        }
+
+        test "repeated parent UUID still receives collision-free child identities" {
+            let hub = BrokerState.create (System.Version(1, 0)) 4 ignore
+            let link : Session.ProxyAiLink =
+                { attachedAt = DateTimeOffset.UtcNow; protocolVersion = System.Version(1, 0); lastSnapshotAt = None
+                  keepAliveIntervalMs = 5000; pluginId = "collision-test"; schemaVersion = "1.0.0"
+                  engineSha256 = "test"; lastHeartbeatAt = DateTimeOffset.UtcNow; lastSeq = 0UL }
+            Expect.equal (BrokerState.attachCoordinator link hub) (Ok ()) "coordinator attached"
+            let parent =
+                mkCoreCommand
+                    (CommandPipeline.Gameplay
+                        (CommandPipeline.UnitOrder ([3u; 4u], CommandPipeline.Stop, None, None)))
+            Expect.equal (BrokerState.sendToCoordinator parent hub) (Ok ()) "first parent admitted"
+            Expect.equal (BrokerState.sendToCoordinator parent hub) (Ok ()) "duplicate parent identity admitted with fresh child identities"
+            let reader =
+                match BrokerState.tryClaimCoordinatorCommandChannel hub with
+                | BrokerState.Claimed lease -> lease.reader
+                | other -> failtestf "expected reader lease, got %A" other
+            let read () =
+                let mutable delivery = Unchecked.defaultof<BrokerState.OutboundDelivery>
+                Expect.isTrue (reader.TryRead(&delivery)) "delivery available"
+                delivery
+            let first = read ()
+            let second = read ()
+            let correlations (delivery: BrokerState.OutboundDelivery) =
+                delivery.batches
+                |> List.map (fun batch -> batch.ClientCommandId |> ValueOption.defaultValue 0UL)
+                |> Set.ofList
+            Expect.isEmpty (Set.intersect (correlations first) (correlations second)) "duplicate parents cannot collide"
+            Expect.sequenceEqual (first.batches |> List.map _.BatchSeq) [1UL; 2UL] "first range"
+            Expect.sequenceEqual (second.batches |> List.map _.BatchSeq) [3UL; 4UL] "second range"
+        }
+
+        test "a coordinator session grants exactly one reader lease" {
+            let hub = BrokerState.create (System.Version(1, 0)) 4 ignore
+            let link : Session.ProxyAiLink =
+                { attachedAt = DateTimeOffset.UtcNow; protocolVersion = System.Version(1, 0); lastSnapshotAt = None
+                  keepAliveIntervalMs = 5000; pluginId = "lease-test"; schemaVersion = "1.0.0"
+                  engineSha256 = "test"; lastHeartbeatAt = DateTimeOffset.UtcNow; lastSeq = 0UL }
+            Expect.equal (BrokerState.attachCoordinator link hub) (Ok ()) "coordinator attached"
+            let oldReader =
+                match BrokerState.tryClaimCoordinatorCommandChannel hub with
+                | BrokerState.Claimed lease -> lease.reader
+                | other -> failtestf "first reader should claim: %A" other
+            Expect.equal (BrokerState.tryClaimCoordinatorCommandChannel hub) BrokerState.AlreadyClaimed "second reader is refused"
+            BrokerState.closeSession Session.OperatorTerminated DateTimeOffset.UtcNow hub
+            Expect.equal (BrokerState.tryClaimCoordinatorCommandChannel hub) BrokerState.NoCoordinator "closed session cannot be claimed"
+            let replacement = { link with attachedAt = DateTimeOffset.UtcNow; pluginId = "lease-test-2" }
+            Expect.equal (BrokerState.attachCoordinator replacement hub) (Ok ()) "replacement coordinator attached"
+            let newReader =
+                match BrokerState.tryClaimCoordinatorCommandChannel hub with
+                | BrokerState.Claimed lease -> lease.reader
+                | other -> failtestf "replacement reader should claim its own channel: %A" other
+            let command = mkCoreCommand (CommandPipeline.Admin CommandPipeline.Pause)
+            Expect.equal (BrokerState.sendToCoordinator command hub) (Ok ()) "replacement delivery admitted"
+            let mutable stale = Unchecked.defaultof<BrokerState.OutboundDelivery>
+            Expect.isFalse (oldReader.TryRead(&stale)) "old lease cannot consume replacement delivery"
+            let mutable current = Unchecked.defaultof<BrokerState.OutboundDelivery>
+            Expect.isTrue (newReader.TryRead(&current)) "replacement lease receives replacement delivery"
+            Expect.equal current.parentCommandId command.commandId "replacement channel identity"
+        }
+
+        test "stale reader cleanup cannot close a renewed channel in the same session" {
+            let hub = BrokerState.create (System.Version(1, 0)) 4 ignore
+            let link : Session.ProxyAiLink =
+                { attachedAt = DateTimeOffset.UtcNow; protocolVersion = System.Version(1, 0); lastSnapshotAt = None
+                  keepAliveIntervalMs = 5000; pluginId = "renewal-test"; schemaVersion = "1.0.0"
+                  engineSha256 = "test"; lastHeartbeatAt = DateTimeOffset.UtcNow; lastSeq = 0UL }
+            Expect.equal (BrokerState.attachCoordinator link hub) (Ok ()) "coordinator attached"
+            let oldLease =
+                match BrokerState.tryClaimCoordinatorCommandChannel hub with
+                | BrokerState.Claimed lease -> lease
+                | other -> failtestf "old lease missing: %A" other
+            BrokerState.completeCoordinatorCommandChannel oldLease.sessionId "normal completion" hub
+            Expect.isTrue (BrokerState.ensureCoordinatorCommandChannel hub) "live session renewed its empty channel"
+            let newLease =
+                match BrokerState.tryClaimCoordinatorCommandChannel hub with
+                | BrokerState.Claimed lease -> lease
+                | other -> failtestf "new lease missing: %A" other
+            BrokerState.closeCoordinatorCommandChannel oldLease.leaseId "late old-reader cleanup" hub
+            Expect.isTrue (BrokerState.hasCoordinatorCommandChannel hub) "old lease cannot close renewed channel"
+            let command = mkCoreCommand (CommandPipeline.Admin CommandPipeline.Pause)
+            Expect.equal (BrokerState.sendToCoordinator command hub) (Ok ()) "renewed channel remains writable"
+            let mutable delivery = Unchecked.defaultof<BrokerState.OutboundDelivery>
+            Expect.isTrue (newLease.reader.TryRead(&delivery)) "renewed reader receives command"
+        }
+
+        test "operator-path outbound refusal is audited" {
+            let hub, audit = mkHubWithAudit ()
+            let command = mkCoreCommand (CommandPipeline.Admin CommandPipeline.Pause)
+            match BrokerState.sendToCoordinator command hub with
+            | Error (CommandPipeline.InvalidPayload detail) ->
+                Expect.stringContains detail "no active coordinator" "actionable refusal"
+            | other -> failtestf "expected no-coordinator refusal, got %A" other
+            Expect.isTrue
+                (audit.ToArray()
+                 |> Array.exists (function
+                    | Audit.CommandRejected (_, client, commandId, CommandPipeline.InvalidPayload _)
+                        when client = command.originatingClient && commandId = command.commandId -> true
+                    | _ -> false))
+                "operator refusal is retained in audit"
+        }
+
+        testAsync "pre-write cancellation records every child NotAttempted" {
+            let hub, audit = mkHubWithAudit ()
+            let service = HighBarCoordinatorService.create hub HighBarCoordinatorService.defaultConfig
+            let link : Session.ProxyAiLink =
+                { attachedAt = DateTimeOffset.UtcNow; protocolVersion = System.Version(1, 0); lastSnapshotAt = None
+                  keepAliveIntervalMs = 5000; pluginId = "cancel-test"; schemaVersion = "1.0.0"
+                  engineSha256 = "test"; lastHeartbeatAt = DateTimeOffset.UtcNow; lastSeq = 0UL }
+            Expect.equal (BrokerState.attachCoordinator link hub) (Ok ()) "coordinator attached"
+            let parent =
+                mkCoreCommand
+                    (CommandPipeline.Gameplay
+                        (CommandPipeline.UnitOrder ([10u; 11u], CommandPipeline.Stop, None, None)))
+            Expect.equal (BrokerState.sendToCoordinator parent hub) (Ok ()) "parent admitted"
+            let cancelledLater = { parent with commandId = Guid.NewGuid() }
+            Expect.equal (BrokerState.sendToCoordinator cancelledLater hub) (Ok ()) "later parent admitted"
+            let reader =
+                match BrokerState.tryClaimCoordinatorCommandChannel hub with
+                | BrokerState.Claimed lease -> lease.reader
+                | other -> failtestf "expected reader lease, got %A" other
+            let mutable delivery = Unchecked.defaultof<BrokerState.OutboundDelivery>
+            Expect.isTrue (reader.TryRead(&delivery)) "delivery available"
+            use cancelled = new CancellationTokenSource()
+            cancelled.Cancel()
+            let mutable writes = 0
+            let! result =
+                HighBarCoordinatorService.writeDelivery service (fun _ -> writes <- writes + 1; Task.CompletedTask) cancelled.Token delivery
+                |> Async.AwaitTask
+            Expect.equal result (Some "cancelled") "cancelled writer stops"
+            Expect.equal writes 0 "no child write was attempted"
+            BrokerState.completeCoordinatorCommandChannel delivery.sessionId "cancelled" hub
+            let outcomes =
+                audit.ToArray()
+                |> Array.choose (function
+                    | Audit.CoordinatorCommandDelivery (_, _, _, parentId, _, _, _, _, _, outcome, _)
+                        when parentId = parent.commandId -> Some outcome
+                    | _ -> None)
+            Expect.sequenceEqual outcomes [Audit.NotAttempted; Audit.NotAttempted] "every child remains explicit"
+            let laterOutcomes =
+                audit.ToArray()
+                |> Array.choose (function
+                    | Audit.CoordinatorCommandDelivery (_, _, _, parentId, _, _, _, _, _, outcome, _)
+                        when parentId = cancelledLater.commandId -> Some outcome
+                    | _ -> None)
+            Expect.sequenceEqual laterOutcomes [Audit.NotAttempted; Audit.NotAttempted] "cancellation drains later accepted parents"
+        }
+
+        testAsync "writer failure records WrittenToTransport, Unknown and NotAttempted without retry" {
+            let hub, audit = mkHubWithAudit ()
+            let service = HighBarCoordinatorService.create hub HighBarCoordinatorService.defaultConfig
+            let link : Session.ProxyAiLink =
+                { attachedAt = DateTimeOffset.UtcNow
+                  protocolVersion = System.Version(1, 0)
+                  lastSnapshotAt = None
+                  keepAliveIntervalMs = 5000
+                  pluginId = "failure-test"
+                  schemaVersion = "1.0.0"
+                  engineSha256 = "test"
+                  lastHeartbeatAt = DateTimeOffset.UtcNow
+                  lastSeq = 0UL }
+            Expect.equal (BrokerState.attachCoordinator link hub) (Ok ()) "coordinator attached"
+            let parent =
+                mkCoreCommand
+                    (CommandPipeline.Gameplay
+                        (CommandPipeline.UnitOrder
+                            ([1u; 2u; 3u], CommandPipeline.Stop, None, None)))
+            Expect.equal (BrokerState.sendToCoordinator parent hub) (Ok ()) "parent admitted"
+            let laterParent =
+                { parent with
+                    commandId = Guid.NewGuid()
+                    kind = CommandPipeline.Gameplay (CommandPipeline.UnitOrder ([7u; 8u], CommandPipeline.Stop, None, None)) }
+            Expect.equal (BrokerState.sendToCoordinator laterParent hub) (Ok ()) "later parent admitted"
+            let reader =
+                match BrokerState.tryClaimCoordinatorCommandChannel hub with
+                | BrokerState.Claimed lease -> lease.reader
+                | other -> failtestf "expected reader lease, got %A" other
+            let mutable delivery = Unchecked.defaultof<BrokerState.OutboundDelivery>
+            Expect.isTrue (reader.TryRead(&delivery)) "delivery available"
+            let mutable writes = 0
+            let writer (_: CommandBatch) =
+                writes <- writes + 1
+                if writes = 2 then Task.FromException(Exception("injected writer failure"))
+                else Task.CompletedTask
+            let! result = HighBarCoordinatorService.writeDelivery service writer CancellationToken.None delivery |> Async.AwaitTask
+            Expect.isSome result "writer failure terminates this delivery"
+            Expect.equal writes 2 "failed child is not replayed and later child is not attempted"
+            BrokerState.completeCoordinatorCommandChannel delivery.sessionId "injected writer failure" hub
+            let outcomes =
+                audit.ToArray()
+                |> Array.choose (function
+                    | Audit.CoordinatorCommandDelivery (_, _, client, parentId, index, childCount, actingUnit, _, _, outcome, _)
+                        when parentId = parent.commandId -> Some (client, index, childCount, actingUnit, outcome)
+                    | _ -> None)
+                |> Array.toList
+            Expect.equal outcomes
+                [ parent.originatingClient, 0, 3, 1u, Audit.WrittenToTransport
+                  parent.originatingClient, 1, 3, 2u, Audit.Unknown
+                  parent.originatingClient, 2, 3, 3u, Audit.NotAttempted ]
+                "transport outcomes retain client, child cardinality and acting-unit mapping"
+            let laterOutcomes =
+                audit.ToArray()
+                |> Array.choose (function
+                    | Audit.CoordinatorCommandDelivery (_, _, _, parentId, _, _, _, _, _, outcome, _)
+                        when parentId = laterParent.commandId -> Some outcome
+                    | _ -> None)
+            Expect.sequenceEqual laterOutcomes [Audit.NotAttempted; Audit.NotAttempted] "writer failure drains later accepted parents"
+        }
+
+        testAsync "session replacement marks every unwritten child NotAttempted" {
+            let hub, audit = mkHubWithAudit ()
+            let service = HighBarCoordinatorService.create hub HighBarCoordinatorService.defaultConfig
+            let link : Session.ProxyAiLink =
+                { attachedAt = DateTimeOffset.UtcNow; protocolVersion = System.Version(1, 0); lastSnapshotAt = None
+                  keepAliveIntervalMs = 5000; pluginId = "replacement-test"; schemaVersion = "1.0.0"
+                  engineSha256 = "test"; lastHeartbeatAt = DateTimeOffset.UtcNow; lastSeq = 0UL }
+            Expect.equal (BrokerState.attachCoordinator link hub) (Ok ()) "coordinator attached"
+            let parent =
+                mkCoreCommand
+                    (CommandPipeline.Gameplay
+                        (CommandPipeline.UnitOrder ([4u; 6u], CommandPipeline.Stop, None, None)))
+            Expect.equal (BrokerState.sendToCoordinator parent hub) (Ok ()) "parent admitted"
+            let queued = { parent with commandId = Guid.NewGuid() }
+            Expect.equal (BrokerState.sendToCoordinator queued hub) (Ok ()) "second parent admitted"
+            let reader =
+                match BrokerState.tryClaimCoordinatorCommandChannel hub with
+                | BrokerState.Claimed lease -> lease.reader
+                | other -> failtestf "expected reader lease, got %A" other
+            let mutable delivery = Unchecked.defaultof<BrokerState.OutboundDelivery>
+            Expect.isTrue (reader.TryRead(&delivery)) "delivery available"
+            BrokerState.closeSession Session.OperatorTerminated DateTimeOffset.UtcNow hub
+            let mutable writes = 0
+            let! result =
+                HighBarCoordinatorService.writeDelivery service (fun _ -> writes <- writes + 1; Task.CompletedTask) CancellationToken.None delivery
+                |> Async.AwaitTask
+            Expect.equal result (Some "session-replaced") "stale session is refused"
+            Expect.equal writes 0 "no stale child is written"
+            let outcomes =
+                audit.ToArray()
+                |> Array.choose (function
+                    | Audit.CoordinatorCommandDelivery (_, _, _, parentId, _, _, _, _, _, outcome, _)
+                        when parentId = parent.commandId -> Some outcome
+                    | _ -> None)
+            Expect.sequenceEqual outcomes [Audit.NotAttempted; Audit.NotAttempted] "all stale children are explicit"
+            let queuedOutcomes =
+                audit.ToArray()
+                |> Array.choose (function
+                    | Audit.CoordinatorCommandDelivery (_, _, _, parentId, _, _, _, _, _, outcome, _)
+                        when parentId = queued.commandId -> Some outcome
+                    | _ -> None)
+            Expect.sequenceEqual queuedOutcomes [Audit.NotAttempted; Audit.NotAttempted] "closure drains later accepted parents"
         }
     ]

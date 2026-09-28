@@ -25,8 +25,6 @@ module HighBarCoordinatorService =
           // Reset per attach. Set to a fresh CTS when an attach completes;
           // cancellation triggers closeSession + stream tear-down.
           mutable sessionCts: CancellationTokenSource option
-          // Sequencing for outbound CommandBatch.batch_seq.
-          mutable nextBatchSeq: uint64
           stateLock: obj }
 
     let create (hub: BrokerState.Hub) (config: Config) : Service =
@@ -36,7 +34,6 @@ module HighBarCoordinatorService =
           config = config
           attached = false
           sessionCts = None
-          nextBatchSeq = 1UL
           stateLock = obj() }
 
     let isAttached (service: Service) : bool = service.attached
@@ -93,6 +90,55 @@ module HighBarCoordinatorService =
 
     let private rpcException (code: Grpc.Core.StatusCode) (detail: string) =
         Grpc.Core.RpcException(Grpc.Core.Status(code, detail))
+
+    let writeDelivery
+        (service: Service)
+        (writeBatch: CommandBatch -> Task)
+        (cancellationToken: CancellationToken)
+        (delivery: BrokerState.OutboundDelivery)
+        : Task<string option> =
+        let emit index (batch: CommandBatch) outcome detail =
+            let correlation =
+                match batch.ClientCommandId with
+                | ValueSome value -> value
+                | ValueNone -> 0UL
+            BrokerState.auditEmitter service.hub
+                (Audit.AuditEvent.CoordinatorCommandDelivery
+                    (DateTimeOffset.UtcNow, delivery.sessionId, delivery.originatingClient,
+                     delivery.parentCommandId, index, delivery.batches.Length, batch.TargetUnitId,
+                     batch.BatchSeq, correlation, outcome, detail))
+        let notAttemptedFrom start detail =
+            delivery.batches
+            |> List.iteri (fun index batch ->
+                if index >= start then emit index batch Audit.NotAttempted detail)
+        task {
+            let batches = List.toArray delivery.batches
+            let mutable index = 0
+            let mutable failure : string option = None
+            while index < batches.Length && failure.IsNone do
+                if cancellationToken.IsCancellationRequested then
+                    notAttemptedFrom index "transport cancelled before write"
+                    failure <- Some "cancelled"
+                elif not (BrokerState.isCurrentDelivery delivery service.hub) then
+                    notAttemptedFrom index "coordinator session was replaced"
+                    failure <- Some "session-replaced"
+                else
+                    let batch = batches[index]
+                    try
+                        do! writeBatch batch
+                        emit index batch Audit.WrittenToTransport "gRPC server-stream write completed; native result unavailable"
+                        index <- index + 1
+                    with
+                    | :? OperationCanceledException ->
+                        emit index batch Audit.Unknown "transport write cancellation left acceptance unknown"
+                        notAttemptedFrom (index + 1) "earlier child write did not complete"
+                        failure <- Some "cancelled-during-write"
+                    | ex ->
+                        emit index batch Audit.Unknown (sprintf "transport write failed: %s" ex.Message)
+                        notAttemptedFrom (index + 1) "earlier child write failed"
+                        failure <- Some (sprintf "write-error: %s" ex.Message)
+            return failure
+        }
 
     type Impl(service: Service) =
         inherit HighBarCoordinator.HighBarCoordinatorBase()
@@ -222,53 +268,59 @@ module HighBarCoordinatorService =
                 let pid =
                     BrokerState.activePluginId service.hub
                     |> Option.defaultValue ""
-                BrokerState.auditEmitter service.hub
-                    (Audit.AuditEvent.CoordinatorCommandChannelOpened (DateTimeOffset.UtcNow, pid))
-                let closeReason =
-                    try
-                        // Drain the broker's coordinator command channel and
-                        // marshal each Core Command to a HighBar CommandBatch.
-                        // Loops until the gRPC context is cancelled or the
-                        // channel is completed.
-                        let rec drain () =
-                            task {
-                                if context.CancellationToken.IsCancellationRequested then
-                                    return "cancelled"
-                                else
-                                    match BrokerState.coordinatorCommandChannel service.hub with
-                                    | None ->
-                                        // No active session yet — wait briefly.
-                                        do! Task.Delay(100, context.CancellationToken)
-                                        return! drain ()
-                                    | Some ch ->
-                                        let! ok = ch.Reader.WaitToReadAsync(context.CancellationToken).AsTask()
-                                        if not ok then
-                                            return "channel-completed"
-                                        else
-                                            let mutable cmd = Unchecked.defaultof<_>
-                                            while ch.Reader.TryRead(&cmd) do
-                                                let seq =
-                                                    withLock service (fun () ->
-                                                        let s = service.nextBatchSeq
-                                                        service.nextBatchSeq <- s + 1UL
-                                                        s)
-                                                match WireConvert.tryFromCoreCommandToHighBar cmd seq with
-                                                | Ok batch ->
-                                                    do! responseStream.WriteAsync(batch)
-                                                | Error reason ->
-                                                    BrokerState.auditEmitter service.hub
-                                                        (Audit.AuditEvent.CommandRejected
-                                                            (DateTimeOffset.UtcNow,
-                                                             cmd.originatingClient,
-                                                             cmd.commandId,
-                                                             reason))
-                                            return! drain ()
-                            }
-                        let task = drain ()
-                        task.Result
-                    with
-                    | :? OperationCanceledException -> "cancelled"
-                    | ex -> sprintf "error: %s" ex.Message
+                let rec claim () =
+                    task {
+                        if context.CancellationToken.IsCancellationRequested then
+                            return Error "cancelled-before-claim"
+                        else
+                            match BrokerState.tryClaimCoordinatorCommandChannel service.hub with
+                            | BrokerState.NoCoordinator ->
+                                if not (BrokerState.ensureCoordinatorCommandChannel service.hub) then
+                                    do! Task.Delay(100, context.CancellationToken)
+                                return! claim ()
+                            | BrokerState.AlreadyClaimed ->
+                                return Error "reader-already-claimed"
+                            | BrokerState.Claimed lease -> return Ok lease
+                    }
+                let rec drain (lease: BrokerState.CoordinatorCommandLease) =
+                    task {
+                        if context.CancellationToken.IsCancellationRequested then
+                            return "cancelled"
+                        else
+                            let! ok = lease.reader.WaitToReadAsync(context.CancellationToken).AsTask()
+                            if not ok then
+                                return "channel-completed"
+                            else
+                                let mutable delivery = Unchecked.defaultof<_>
+                                let mutable failure : string option = None
+                                while failure.IsNone && lease.reader.TryRead(&delivery) do
+                                    let! result =
+                                        writeDelivery service responseStream.WriteAsync context.CancellationToken delivery
+                                    failure <- result
+                                match failure with
+                                | Some reason -> return reason
+                                | None -> return! drain lease
+                    }
+                let! closeReason =
+                    task {
+                      try
+                        let! claimResult = claim ()
+                        match claimResult with
+                        | Error reason -> return reason
+                        | Ok lease ->
+                            BrokerState.auditEmitter service.hub
+                                (Audit.AuditEvent.CoordinatorCommandChannelOpened (DateTimeOffset.UtcNow, pid))
+                            try
+                                return! drain lease
+                            finally
+                                BrokerState.closeCoordinatorCommandChannel
+                                    lease.leaseId
+                                    "command stream exited before transport write"
+                                    service.hub
+                      with
+                      | :? OperationCanceledException -> return "cancelled"
+                      | ex -> return sprintf "error: %s" ex.Message
+                    }
                 BrokerState.auditEmitter service.hub
                     (Audit.AuditEvent.CoordinatorCommandChannelClosed (DateTimeOffset.UtcNow, pid, closeReason))
             } :> Task

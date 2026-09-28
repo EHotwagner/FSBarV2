@@ -43,6 +43,8 @@ module BrokerState =
           mutable expectedSchemaVersion: string
           mutable ownerRule: OwnerRule
           mutable telemetryGap: bool
+          mutable telemetryValid: bool
+          mutable invalidity: (uint64 * uint64 * string) option
           // Live coordinator metadata that the heartbeat watchdog reads. Distinct
           // from the immutable ProxyAiLink embedded in Session.proxy so the watchdog
           // can refresh the timestamp without rebuilding the session record.
@@ -68,6 +70,8 @@ module BrokerState =
           expectedSchemaVersion = "1.0.0"
           ownerRule = FirstAttached
           telemetryGap = false
+          telemetryValid = false
+          invalidity = None
           activePluginId = None
           lastHeartbeatAt = DateTimeOffset.MinValue
           clients = System.Collections.Concurrent.ConcurrentDictionary<ScriptingClientId, ClientChannel>()
@@ -182,6 +186,8 @@ module BrokerState =
                 hub.activePluginId <- None
                 hub.lastHeartbeatAt <- DateTimeOffset.MinValue
                 hub.telemetryGap <- false
+                hub.telemetryValid <- false
+                hub.invalidity <- None
                 if prevMode <> hub.mode then
                     hub.auditEmitter (Audit.AuditEvent.ModeChanged (at, prevMode, hub.mode)))
 
@@ -206,29 +212,27 @@ module BrokerState =
                 Ok ())
 
     let applySnapshot (snapshot: Snapshot.GameStateSnapshot) (hub: Hub) : unit =
-        let wireSnapshot, subscribers =
+        // Convert before taking the lock, then enqueue under the same lock as
+        // invalidation and subscription. This preserves stream order without
+        // holding the lock across network I/O (TryWrite is nonblocking).
+        let message = StateMsg.empty()
+        message.Snapshot <- WireConvert.fromCoreSnapshot snapshot
+        let applied =
             withLock hub (fun () ->
                 match hub.session with
-                | None -> None, []
+                | None -> false
                 | Some s ->
-                    let updated = Session.applySnapshot snapshot s
-                    hub.session <- Some updated
-                    let subs =
-                        hub.clients
-                        |> Seq.choose (fun kv -> kv.Value.subscriber)
-                        |> List.ofSeq
-                    Some snapshot, subs)
-        // Build the wire-format StateMsg outside the state lock — the
-        // conversion is non-trivial and we don't want to hold the lock
-        // while N subscriber channels each take their own write.
-        match wireSnapshot with
-        | None -> ()
-        | Some snap ->
-            let m = StateMsg.empty()
-            m.Snapshot <- WireConvert.fromCoreSnapshot snap
-            for ch in subscribers do
-                ch.Writer.TryWrite(m) |> ignore
-            hub.snapshotBroadcaster.Push snap
+                    hub.session <- Some (Session.applySnapshot snapshot s)
+                    hub.telemetryValid <- true
+                    hub.telemetryGap <- false
+                    hub.invalidity <- None
+                    for KeyValue(_, client) in hub.clients do
+                        match client.subscriber with
+                        | Some channel -> channel.Writer.TryWrite(message) |> ignore
+                        | None -> ()
+                    true)
+        if applied then
+            hub.snapshotBroadcaster.Push snapshot
 
     let snapshots (hub: Hub) : IObservable<Snapshot.GameStateSnapshot> =
         hub.snapshotBroadcaster :> IObservable<Snapshot.GameStateSnapshot>
@@ -256,6 +260,34 @@ module BrokerState =
         | Some ch -> ch.Writer.TryWrite(command) |> ignore
         | None -> ()
 
+    let admitScriptingCommand
+        (client: ClientChannel)
+        (command: CommandPipeline.Command)
+        (hub: Hub)
+        : BackpressureGate.CommandAck =
+        withLock hub (fun () ->
+            if hub.telemetryGap then
+                { commandId = command.commandId
+                  accepted = false
+                  reject =
+                    Some (
+                        CommandPipeline.InvalidPayload
+                            "telemetry baseline is invalid; wait for a complete snapshot") }
+            else
+                let gate = BackpressureGate.create client.queue
+                let result =
+                    BackpressureGate.process_
+                        gate
+                        hub.mode
+                        hub.roster
+                        hub.slots
+                        command
+                if result.accepted then
+                    match hub.coordinatorOutbound with
+                    | Some channel -> channel.Writer.TryWrite(command) |> ignore
+                    | None -> ()
+                result)
+
     let expectedSchemaVersion (hub: Hub) = hub.expectedSchemaVersion
     let setExpectedSchemaVersion (v: string) (hub: Hub) : unit =
         withLock hub (fun () -> hub.expectedSchemaVersion <- v)
@@ -272,7 +304,9 @@ module BrokerState =
             withLock hub (fun () ->
                 hub.activePluginId <- Some link.pluginId
                 hub.lastHeartbeatAt <- link.attachedAt
-                hub.telemetryGap <- false)
+                hub.telemetryGap <- false
+                hub.telemetryValid <- false
+                hub.invalidity <- None)
             hub.auditEmitter (
                 Audit.AuditEvent.CoordinatorAttached
                     (link.attachedAt, link.pluginId, link.schemaVersion, link.engineSha256))
@@ -317,9 +351,49 @@ module BrokerState =
         (at: DateTimeOffset)
         (hub: Hub)
         : unit =
+        let validity = StateValidity.empty()
+        validity.Status <- StateValidity.Types.Status.Invalid
+        validity.LastSeq <- lastSeq
+        validity.ReceivedSeq <- receivedSeq
+        validity.Detail <- "state sequence gap"
+        let message = StateMsg.empty()
+        message.Validity <- validity
         withLock hub (fun () ->
-            hub.telemetryGap <- true
-            hub.auditEmitter (Audit.AuditEvent.CoordinatorStateGap (at, pluginId, lastSeq, receivedSeq)))
+                hub.telemetryGap <- true
+                hub.telemetryValid <- false
+                hub.invalidity <- Some (lastSeq, receivedSeq, "state sequence gap")
+                for KeyValue(_, client) in hub.clients do
+                    match client.subscriber with
+                    | Some channel -> channel.Writer.TryWrite(message) |> ignore
+                    | None -> ())
+        hub.auditEmitter (Audit.AuditEvent.CoordinatorStateGap (at, pluginId, lastSeq, receivedSeq))
+
+    let noteStateInvalidated
+        (pluginId: string)
+        (lastSeq: uint64)
+        (receivedSeq: uint64)
+        (detail: string)
+        (at: DateTimeOffset)
+        (hub: Hub)
+        : unit =
+        let validity = StateValidity.empty()
+        validity.Status <- StateValidity.Types.Status.Invalid
+        validity.LastSeq <- lastSeq
+        validity.ReceivedSeq <- receivedSeq
+        validity.Detail <- detail
+        let message = StateMsg.empty()
+        message.Validity <- validity
+        withLock hub (fun () ->
+                hub.telemetryGap <- true
+                hub.telemetryValid <- false
+                hub.invalidity <- Some (lastSeq, receivedSeq, detail)
+                for KeyValue(_, client) in hub.clients do
+                    match client.subscriber with
+                    | Some channel -> channel.Writer.TryWrite(message) |> ignore
+                    | None -> ())
+        hub.auditEmitter (
+            Audit.AuditEvent.CoordinatorStateInvalidated
+                (at, pluginId, lastSeq, receivedSeq, detail))
 
     /// Lightweight liveness refresh — bumps `lastHeartbeatAt` without
     /// taking the owner-rule path or emitting an audit event. Called per
@@ -340,8 +414,49 @@ module BrokerState =
 
     let telemetryGap (hub: Hub) : bool = hub.telemetryGap
 
+    let telemetryValid (hub: Hub) : bool = hub.telemetryValid
+
+    let subscribeState
+        (client: ClientChannel)
+        (channel: Channel<StateMsg>)
+        (hub: Hub)
+        : unit =
+        withLock hub (fun () ->
+            client.subscriber <- Some channel
+            let initial =
+                match hub.session with
+                | None -> None
+                | Some session when hub.telemetryValid ->
+                    (Session.toReading DateTimeOffset.UtcNow session).telemetry
+                    |> Option.map (fun snapshot ->
+                        let message = StateMsg.empty()
+                        message.Snapshot <- WireConvert.fromCoreSnapshot snapshot
+                        message)
+                | Some _ ->
+                    let lastSeq, receivedSeq, detail =
+                        hub.invalidity
+                        |> Option.defaultValue (0UL, 0UL, "awaiting a complete state snapshot")
+                    let validity = StateValidity.empty()
+                    validity.Status <- StateValidity.Types.Status.Invalid
+                    validity.LastSeq <- lastSeq
+                    validity.ReceivedSeq <- receivedSeq
+                    validity.Detail <- detail
+                    let message = StateMsg.empty()
+                    message.Validity <- validity
+                    Some message
+            match initial with
+            | Some message -> channel.Writer.TryWrite(message) |> ignore
+            | None -> ())
+
+    let unsubscribeState (client: ClientChannel) (hub: Hub) : unit =
+        withLock hub (fun () -> client.subscriber <- None)
+
     let clearTelemetryGap (hub: Hub) : unit =
-        withLock hub (fun () -> hub.telemetryGap <- false)
+        withLock hub (fun () ->
+            // A current invalid baseline cannot be acknowledged away. The
+            // flag clears when applySnapshot establishes recovery.
+            if hub.telemetryValid then
+                hub.telemetryGap <- false)
 
     let registerClient
         (id: ScriptingClientId)

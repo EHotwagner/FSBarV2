@@ -38,6 +38,25 @@ let private mkKeepalive (seqNo: uint64) (frame: uint32) =
     upd.Keepalive <- KeepAlive.empty()
     upd
 
+let private mkDelta (seqNo: uint64) (frame: uint32) (nonempty: bool) =
+    let delta = StateDelta.empty()
+    if nonempty then
+        let event = DeltaEvent.empty()
+        event.EconomyTick <- EconomyTickEvent.empty()
+        delta.Events.Add(event)
+    let upd = StateUpdate.empty()
+    upd.Seq <- seqNo
+    upd.Frame <- frame
+    upd.Delta <- delta
+    upd
+
+let private position x y z =
+    let p = Vector3.empty()
+    p.X <- x
+    p.Y <- y
+    p.Z <- z
+    p
+
 let private mkHubWithAudit () =
     let q = ConcurrentQueue<Audit.AuditEvent>()
     let hub = BrokerState.create (System.Version(1, 0)) 64 (fun e -> q.Enqueue e)
@@ -67,28 +86,25 @@ let wireConvertTests =
             | other -> failtestf "expected KeepAliveOnly, got %A" other
         }
 
-        test "first update sets running seq without raising a gap" {
+        test "first complete snapshot establishes the baseline without raising a gap" {
             let v0 = WireConvert.emptyRunningView
             let upd = mkStateUpdate 5UL 42u
             let v1, result = WireConvert.applyHighBarStateUpdate upd v0
             Expect.equal (WireConvert.lastSeq v1) 5UL "lastSeq advanced"
+            Expect.isTrue (WireConvert.hasValidBaseline v1) "snapshot establishes baseline"
             match result with
             | WireConvert.Gap _ -> failtest "first update must not raise Gap"
             | _ -> ()
         }
 
-        test "seq jump > 1 returns Gap with both endpoints" {
+        test "newer full snapshot recovers directly across a sequence jump" {
             let v0 = WireConvert.emptyRunningView
-            // First update establishes lastSeq = 1.
             let v1, _ = WireConvert.applyHighBarStateUpdate (mkStateUpdate 1UL 1u) v0
-            // Second update jumps from 1 to 5 (3 frames dropped) — gap.
-            let _, result = WireConvert.applyHighBarStateUpdate (mkStateUpdate 5UL 5u) v1
+            let v2, result = WireConvert.applyHighBarStateUpdate (mkStateUpdate 5UL 5u) v1
+            Expect.isTrue (WireConvert.hasValidBaseline v2) "replacement snapshot is valid"
             match result with
-            | WireConvert.Gap (last, recv) ->
-                Expect.equal last 1UL "gap last seq"
-                Expect.equal recv 5UL "gap received seq"
-            | other ->
-                failtestf "expected Gap, got %A" other
+            | WireConvert.NewSnapshot snapshot -> Expect.equal snapshot.tick 5L "new baseline tick"
+            | other -> failtestf "expected NewSnapshot, got %A" other
         }
 
         test "consecutive updates do not raise a gap" {
@@ -98,6 +114,101 @@ let wireConvertTests =
             match result with
             | WireConvert.Gap _ -> failtest "consecutive seq must not raise Gap"
             | _ -> ()
+        }
+
+        test "native X/Y/Z projects to legacy ground X/Z" {
+            let own = OwnUnit.empty()
+            own.UnitId <- 7u
+            own.DefId <- 42u
+            own.Position <- ValueSome (position 11.0f 7.0f 23.0f)
+            let upd = mkStateUpdate 1UL 1u
+            upd.Snapshot.OwnUnits.Add(own)
+            let _, result = WireConvert.applyHighBarStateUpdate upd WireConvert.emptyRunningView
+            match result with
+            | WireConvert.NewSnapshot snapshot ->
+                Expect.equal snapshot.units.Head.pos.x 11.0f "ground x comes from native X"
+                Expect.equal snapshot.units.Head.pos.y 23.0f "ground y comes from native Z"
+            | other -> failtestf "expected NewSnapshot, got %A" other
+        }
+
+        test "nonempty delta before a baseline cannot fabricate a snapshot" {
+            let view, result =
+                WireConvert.applyHighBarStateUpdate
+                    (mkDelta 1UL 1u true)
+                    WireConvert.emptyRunningView
+            Expect.isFalse (WireConvert.hasValidBaseline view) "no baseline was invented"
+            match result with
+            | WireConvert.Invalidated (_, 1UL, _) -> ()
+            | other -> failtestf "expected Invalidated, got %A" other
+        }
+
+        test "snapshot gap delta invalidates until a newer snapshot recovers" {
+            let v1, _ = WireConvert.applyHighBarStateUpdate (mkStateUpdate 1UL 1u) WireConvert.emptyRunningView
+            let v2, gap = WireConvert.applyHighBarStateUpdate (mkDelta 3UL 3u true) v1
+            Expect.isFalse (WireConvert.hasValidBaseline v2) "gap invalidates baseline"
+            match gap with
+            | WireConvert.Gap (1UL, 3UL) -> ()
+            | other -> failtestf "expected gap, got %A" other
+            let v3, recovery = WireConvert.applyHighBarStateUpdate (mkStateUpdate 4UL 4u) v2
+            Expect.isTrue (WireConvert.hasValidBaseline v3) "full snapshot recovers"
+            match recovery with
+            | WireConvert.NewSnapshot snapshot -> Expect.equal snapshot.tick 4L "recovery tick"
+            | other -> failtestf "expected recovered snapshot, got %A" other
+        }
+
+        test "unapplied delta invalidates until a newer snapshot recovers" {
+            let v1, _ = WireConvert.applyHighBarStateUpdate (mkStateUpdate 1UL 1u) WireConvert.emptyRunningView
+            let v2, invalid = WireConvert.applyHighBarStateUpdate (mkDelta 2UL 2u true) v1
+            Expect.isFalse (WireConvert.hasValidBaseline v2) "unapplied delta invalidates"
+            match invalid with
+            | WireConvert.Invalidated (1UL, 2UL, _) -> ()
+            | other -> failtestf "expected invalidation, got %A" other
+            let v3, recovery = WireConvert.applyHighBarStateUpdate (mkStateUpdate 3UL 3u) v2
+            Expect.isTrue (WireConvert.hasValidBaseline v3) "full snapshot recovers"
+            match recovery with
+            | WireConvert.NewSnapshot _ -> ()
+            | other -> failtestf "expected recovered snapshot, got %A" other
+        }
+
+        test "empty delta and keepalive advance transport only" {
+            let v1, _ = WireConvert.applyHighBarStateUpdate (mkStateUpdate 1UL 1u) WireConvert.emptyRunningView
+            let v2, emptyResult = WireConvert.applyHighBarStateUpdate (mkDelta 2UL 2u false) v1
+            let v3, keepaliveResult = WireConvert.applyHighBarStateUpdate (mkKeepalive 3UL 2u) v2
+            Expect.equal emptyResult WireConvert.KeepAliveOnly "empty delta emits no snapshot"
+            Expect.equal keepaliveResult WireConvert.KeepAliveOnly "keepalive emits no snapshot"
+            Expect.isTrue (WireConvert.hasValidBaseline v3) "transport-only updates preserve baseline"
+            Expect.equal (WireConvert.lastSeq v3) 3UL "transport sequence advances"
+        }
+
+        test "older and duplicate updates never regress the accepted sequence" {
+            let v1, _ = WireConvert.applyHighBarStateUpdate (mkStateUpdate 5UL 5u) WireConvert.emptyRunningView
+            let v2, _ = WireConvert.applyHighBarStateUpdate (mkStateUpdate 5UL 50u) v1
+            let v3, _ = WireConvert.applyHighBarStateUpdate (mkStateUpdate 4UL 40u) v2
+            Expect.equal (WireConvert.lastSeq v3) 5UL "sequence did not regress"
+            Expect.isTrue (WireConvert.hasValidBaseline v3) "valid baseline is retained"
+        }
+
+        test "maximum sequence does not overflow gap detection" {
+            let v1, _ =
+                WireConvert.applyHighBarStateUpdate
+                    (mkStateUpdate UInt64.MaxValue UInt32.MaxValue)
+                    WireConvert.emptyRunningView
+            let v2, result = WireConvert.applyHighBarStateUpdate (mkKeepalive 0UL 0u) v1
+            Expect.equal (WireConvert.lastSeq v2) UInt64.MaxValue "wrapped sequence is ignored"
+            Expect.equal result WireConvert.KeepAliveOnly "older update is transport-only"
+        }
+
+        test "snapshot with a missing entity position is invalid instead of fabricating zeroes" {
+            let own = OwnUnit.empty()
+            own.UnitId <- 9u
+            let upd = mkStateUpdate 1UL 1u
+            upd.Snapshot.OwnUnits.Add(own)
+            let view, result = WireConvert.applyHighBarStateUpdate upd WireConvert.emptyRunningView
+            Expect.isFalse (WireConvert.hasValidBaseline view) "incomplete snapshot rejected"
+            match result with
+            | WireConvert.Invalidated (_, _, detail) ->
+                Expect.stringContains detail "missing position" "reason identifies absent field"
+            | other -> failtestf "expected invalidation, got %A" other
         }
     ]
 
@@ -181,7 +292,8 @@ let commandTranslationTests =
                     match mu.ToPosition with
                     | ValueSome p ->
                         Expect.equal p.X 10.0f "x"
-                        Expect.equal p.Y 20.0f "y"
+                        Expect.equal p.Y 0.0f "native elevation is deliberately zero"
+                        Expect.equal p.Z 20.0f "legacy ground y maps to native Z"
                     | ValueNone -> failtest "expected ToPosition"
                 | other -> failtestf "expected MoveUnit, got %A" other
             | Error r -> failtestf "unexpected reject: %A" r
@@ -209,7 +321,7 @@ let commandTranslationTests =
                 mkCoreCommand
                     (CommandPipeline.Gameplay
                         (CommandPipeline.UnitOrder
-                            ([3u], CommandPipeline.Attack, Some { x = 0.0f; y = 0.0f }, None)))
+                            ([3u], CommandPipeline.Attack, Some { x = 11.0f; y = 23.0f }, None)))
             match WireConvert.tryFromCoreCommandToHighBar cmd 3UL with
             | Ok batch ->
                 let ai = firstAi batch
@@ -217,6 +329,12 @@ let commandTranslationTests =
                 | ValueSome (AICommand.Types.Command.AttackArea aa) ->
                     Expect.equal aa.UnitId 3 "unit id"
                     Expect.isGreaterThan aa.Radius 0.0f "non-zero radius"
+                    match aa.AttackPosition with
+                    | ValueSome p ->
+                        Expect.equal p.X 11.0f "attack ground x"
+                        Expect.equal p.Y 0.0f "attack elevation"
+                        Expect.equal p.Z 23.0f "attack ground z"
+                    | ValueNone -> failtest "expected AttackPosition"
                 | other -> failtestf "expected AttackArea, got %A" other
             | Error r -> failtestf "unexpected reject: %A" r
         }
@@ -251,6 +369,12 @@ let commandTranslationTests =
                 match ai.Command with
                 | ValueSome (AICommand.Types.Command.Patrol p) ->
                     Expect.equal p.UnitId 4 "unit id"
+                    match p.ToPosition with
+                    | ValueSome target ->
+                        Expect.equal target.X 50.0f "patrol ground x"
+                        Expect.equal target.Y 0.0f "patrol elevation"
+                        Expect.equal target.Z 60.0f "patrol ground z"
+                    | ValueNone -> failtest "expected ToPosition"
                 | other -> failtestf "expected Patrol, got %A" other
             | Error r -> failtestf "unexpected reject: %A" r
         }
@@ -269,6 +393,12 @@ let commandTranslationTests =
                 | ValueSome (AICommand.Types.Command.BuildUnit b) ->
                     Expect.equal b.UnitId 10 "builder"
                     Expect.equal b.ToBuildUnitDefId 42 "class -> def id"
+                    match b.BuildPosition with
+                    | ValueSome p ->
+                        Expect.equal p.X 100.0f "build ground x"
+                        Expect.equal p.Y 0.0f "build elevation"
+                        Expect.equal p.Z 200.0f "build ground z"
+                    | ValueNone -> failtest "expected BuildPosition"
                 | other -> failtestf "expected BuildUnit, got %A" other
             | Error r -> failtestf "unexpected reject: %A" r
         }

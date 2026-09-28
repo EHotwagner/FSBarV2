@@ -22,6 +22,7 @@ module Audit =
         | CoordinatorCommandChannelOpened of at:DateTimeOffset * pluginId:string
         | CoordinatorCommandChannelClosed of at:DateTimeOffset * pluginId:string * reason:string
         | CoordinatorStateGap of at:DateTimeOffset * pluginId:string * lastSeq:uint64 * receivedSeq:uint64
+        | CoordinatorStateInvalidated of at:DateTimeOffset * pluginId:string * lastSeq:uint64 * receivedSeq:uint64 * detail:string
 
     let private nameOf (ScriptingClientId n) = n
 
@@ -95,3 +96,7 @@ module Audit =
             struct (
                 "audit.coordinator_state_gap at={At} plugin_id={PluginId} last_seq={LastSeq} received_seq={ReceivedSeq}",
                 [| "At", box at; "PluginId", box pid; "LastSeq", box lastSeq; "ReceivedSeq", box recvSeq |])
+        | CoordinatorStateInvalidated (at, pid, lastSeq, recvSeq, detail) ->
+            struct (
+                "audit.coordinator_state_invalidated at={At} plugin_id={PluginId} last_seq={LastSeq} received_seq={ReceivedSeq} detail={Detail}",
+                [| "At", box at; "PluginId", box pid; "LastSeq", box lastSeq; "ReceivedSeq", box recvSeq; "Detail", box detail |])

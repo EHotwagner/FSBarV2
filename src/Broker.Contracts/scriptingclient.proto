@@ -68,7 +68,23 @@ message StateMsg {
   oneof body {
     GameStateSnapshot snapshot = 1;
     SessionEnd session_end = 2;
+    StateValidity validity = 3;
   }
+}
+
+// Additive stream metadata. Readers compiled against the earlier schema do
+// not mistake this for a fresh snapshot; the broker also suppresses cached
+// snapshots and command admission while the baseline is invalid.
+message StateValidity {
+  enum Status {
+    STATUS_UNSPECIFIED = 0;
+    INVALID = 1;
+  }
+
+  Status status = 1;
+  uint64 last_seq = 2;
+  uint64 received_seq = 3;
+  string detail = 4;
 }
 
 message BindSlotRequest {

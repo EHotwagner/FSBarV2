@@ -23,6 +23,7 @@ module Audit =
         | CoordinatorCommandChannelOpened of at:DateTimeOffset * pluginId:string
         | CoordinatorCommandChannelClosed of at:DateTimeOffset * pluginId:string * reason:string
         | CoordinatorStateGap of at:DateTimeOffset * pluginId:string * lastSeq:uint64 * receivedSeq:uint64
+        | CoordinatorStateInvalidated of at:DateTimeOffset * pluginId:string * lastSeq:uint64 * receivedSeq:uint64 * detail:string
 
     /// Render an event for Serilog. Returns the message template + its
     /// structured property bag. The keys in the bag are stable identifiers

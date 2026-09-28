@@ -7,10 +7,10 @@
     <Description>gRPC wire contracts (.proto) for the TUI gRPC Game Broker, with F# generated types.</Description>
     <!-- Generated proto code (Grpc-FSharp.Tools 0.2.0) predates nullable F#; disable for generated assembly. -->
     <Nullable>disable</Nullable>
-    <!-- HighBarV3 vendored proto set uses proto3 optional (added in protoc 3.15);
-         Grpc-FSharp.Tools 0.2.0 bundles protoc 3.13. Override with the system
-         protoc, which is new enough to handle the syntax. -->
-    <Protobuf_ProtocFullPath Condition="Exists('/usr/bin/protoc')">/usr/bin/protoc</Protobuf_ProtocFullPath>
+    <!-- Grpc-FSharp.Tools does not bundle its matching protoc-gen-fsharp.
+         The repository-local launcher restores and invokes the pinned 0.2.0
+         tool, while eng/protoc supplies it explicitly to the bundled protoc. -->
+    <Protobuf_ProtocFullPath>$(MSBuildProjectDirectory)/../../eng/protoc</Protobuf_ProtocFullPath>
   </PropertyGroup>
 
   <ItemGroup>
@@ -28,6 +28,10 @@
     <Protobuf Include="highbar/state.proto" GrpcServices="None" ProtoRoot="." AdditionalProtocArguments="--experimental_allow_proto3_optional" />
     <Protobuf Include="highbar/coordinator.proto" GrpcServices="Both" ProtoRoot="." AdditionalProtocArguments="--experimental_allow_proto3_optional" />
   </ItemGroup>
+
+  <Target Name="RestorePinnedFSharpProtocPlugin" BeforeTargets="_Protobuf_CoreCompile">
+    <Exec Command="dotnet tool restore --tool-manifest &quot;$(MSBuildProjectDirectory)/../../.config/dotnet-tools.json&quot;" />
+  </Target>
 
   <ItemGroup>
     <PackageReference Include="Google.Protobuf" Version="3.34.1" />

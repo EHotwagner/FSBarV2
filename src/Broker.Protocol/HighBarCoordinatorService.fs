@@ -193,6 +193,9 @@ module HighBarCoordinatorService =
                             | WireConvert.Gap (l, r) ->
                                 BrokerState.noteStateGap pid l r now service.hub
                                 BrokerState.refreshLiveness now service.hub
+                            | WireConvert.Invalidated (l, r, detail) ->
+                                BrokerState.noteStateInvalidated pid l r detail now service.hub
+                                BrokerState.refreshLiveness now service.hub
                             | WireConvert.KeepAliveOnly ->
                                 BrokerState.refreshLiveness now service.hub
                 with

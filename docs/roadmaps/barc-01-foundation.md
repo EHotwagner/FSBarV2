@@ -27,9 +27,10 @@ publication and deployment remain outside this window.
   emits additive invalidity metadata, suppresses cached state for late joins,
   blocks scripting command admission while a gap is current, and clears the
   live gap on full-snapshot recovery while retaining audit history.
+- [ ] **BARC-01.1d — strict command admission.** Decode scripting wire commands with explicit errors before queue admission. Reject missing or ambiguous fields, non-finite coordinates and grants, unsupported custom commands, multi-unit orders, out-of-range native IDs and nonnumeric build definitions. Preserve the Guard target in the native command. Keep multi-unit expansion for BARC-01.1e; no native or browser qualification is implied by this synthetic broker slice.
 
-Protected `main` is `57261ce57dfebc86d7cd4301118ec01fd935504b`; its tree
-`722df87507c357aba2168f336b44b0c7229dad5e` matches the tested local source tree.
+BARC-01.1a–c are merged to protected `main`; the new command-admission slice
+requires its own qualification and protected readback before its box is checked.
 
 ## Evidence boundary
 

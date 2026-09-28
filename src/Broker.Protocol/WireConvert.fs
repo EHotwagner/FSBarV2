@@ -148,14 +148,30 @@ module WireConvert =
         w.Minor <- uint32 (max 0 version.Minor)
         w
 
-    let private toCoreOrderKind (k: UnitOrder.Types.OrderKind) : CommandPipeline.OrderKind =
+    let private invalid detail = Error (CommandPipeline.InvalidPayload detail)
+
+    let private finite32 (value: float32) = not (Single.IsNaN value || Single.IsInfinity value)
+
+    let private finite64 (value: float) = not (Double.IsNaN value || Double.IsInfinity value)
+
+    let private validPosition (name: string) (pos: ValueOption<Vec2>) : Result<Snapshot.Vec2, CommandPipeline.RejectReason> =
+        match pos with
+        | ValueSome p when finite32 p.X && finite32 p.Y -> Ok { x = p.X; y = p.Y }
+        | ValueSome _ -> invalid (name + " has non-finite coordinates")
+        | ValueNone -> invalid (name + " is required")
+
+    let private validNativeId (name: string) (id: uint32) : Result<unit, CommandPipeline.RejectReason> =
+        if id > uint32 Int32.MaxValue then invalid (name + " exceeds the native signed identifier range")
+        else Ok ()
+
+    let private toCoreOrderKind (k: UnitOrder.Types.OrderKind) : Result<CommandPipeline.OrderKind, CommandPipeline.RejectReason> =
         match k with
-        | UnitOrder.Types.OrderKind.Move    -> CommandPipeline.Move
-        | UnitOrder.Types.OrderKind.Attack  -> CommandPipeline.Attack
-        | UnitOrder.Types.OrderKind.Stop    -> CommandPipeline.Stop
-        | UnitOrder.Types.OrderKind.Guard   -> CommandPipeline.Guard
-        | UnitOrder.Types.OrderKind.Patrol  -> CommandPipeline.Patrol
-        | _                                 -> CommandPipeline.Stop
+        | UnitOrder.Types.OrderKind.Move    -> Ok CommandPipeline.Move
+        | UnitOrder.Types.OrderKind.Attack  -> Ok CommandPipeline.Attack
+        | UnitOrder.Types.OrderKind.Stop    -> Ok CommandPipeline.Stop
+        | UnitOrder.Types.OrderKind.Guard   -> Ok CommandPipeline.Guard
+        | UnitOrder.Types.OrderKind.Patrol  -> Ok CommandPipeline.Patrol
+        | _                                 -> invalid "unknown unit order"
 
     let private toCoreVision (m: VisionMode) : CommandPipeline.VisionMode =
         match m with
@@ -169,53 +185,83 @@ module WireConvert =
         | VictoryOverride.ForceLose  -> CommandPipeline.ForceLose
         | _                          -> CommandPipeline.Reset
 
-    let private toCoreGameplay (gp: GameplayPayload) : CommandPipeline.GameplayPayload =
+    let private toCoreGameplay (gp: GameplayPayload) : Result<CommandPipeline.GameplayPayload, CommandPipeline.RejectReason> =
         match gp.Body with
         | ValueSome (GameplayPayload.Types.Body.UnitOrder uo) ->
-            let target =
+            let ids = uo.UnitIds |> List.ofSeq
+            let targetUnit = if uo.TargetUnitId = 0u then None else Some uo.TargetUnitId
+            let targetPos =
                 match uo.TargetPos with
-                | ValueSome p -> Some { Snapshot.x = p.X; Snapshot.y = p.Y }
-                | ValueNone -> None
-            let targetUnit =
-                if uo.TargetUnitId = 0u then None else Some uo.TargetUnitId
-            CommandPipeline.UnitOrder (
-                uo.UnitIds |> List.ofSeq,
-                toCoreOrderKind uo.Kind,
-                target,
-                targetUnit)
+                | ValueSome p when finite32 p.X && finite32 p.Y -> Ok (Some { Snapshot.x = p.X; Snapshot.y = p.Y })
+                | ValueSome _ -> invalid "target position has non-finite coordinates"
+                | ValueNone -> Ok None
+            match ids with
+            | [unitId] ->
+                validNativeId "unit id" unitId
+                |> Result.bind (fun () -> toCoreOrderKind uo.Kind)
+                |> Result.bind (fun kind ->
+                    targetPos |> Result.bind (fun pos ->
+                        let targetCheck =
+                            match targetUnit with
+                            | Some id -> validNativeId "target unit id" id
+                            | None -> Ok ()
+                        targetCheck |> Result.bind (fun () ->
+                            match kind, pos, targetUnit with
+                            | CommandPipeline.Move, Some _, None
+                            | CommandPipeline.Patrol, Some _, None
+                            | CommandPipeline.Stop, None, None
+                            | CommandPipeline.Attack, Some _, None
+                            | CommandPipeline.Attack, None, Some _
+                            | CommandPipeline.Guard, None, Some _ ->
+                                Ok (CommandPipeline.UnitOrder (ids, kind, pos, targetUnit))
+                            | _ -> invalid (sprintf "%A has missing or ambiguous target fields" kind))))
+            | [] -> invalid "unit order has no acting unit"
+            | _ -> invalid "multi-unit order requires explicit per-unit expansion"
         | ValueSome (GameplayPayload.Types.Body.Build bo) ->
-            CommandPipeline.Build (bo.BuilderId, bo.ClassId, toCoreVecOpt bo.Pos)
-        | ValueSome (GameplayPayload.Types.Body.Custom c) ->
-            CommandPipeline.Custom (c.Name, c.Blob.ToByteArray())
-        | ValueNone ->
-            CommandPipeline.Custom ("", [||])
+            validNativeId "builder id" bo.BuilderId
+            |> Result.bind (fun () -> validPosition "build position" bo.Pos)
+            |> Result.bind (fun pos ->
+                let mutable defId = 0
+                if Int32.TryParse(bo.ClassId, &defId) && defId > 0 then
+                    Ok (CommandPipeline.Build (bo.BuilderId, bo.ClassId, pos))
+                else invalid "build class id must be a positive native definition id")
+        | ValueSome (GameplayPayload.Types.Body.Custom _) -> invalid "custom gameplay commands have no supported native mapping"
+        | ValueNone -> invalid "gameplay command body is missing"
 
-    let private toCoreAdmin (ap: AdminPayload) : CommandPipeline.AdminPayload =
+    let private toCoreAdmin (ap: AdminPayload) : Result<CommandPipeline.AdminPayload, CommandPipeline.RejectReason> =
         match ap.Body with
-        | ValueSome (AdminPayload.Types.Body.SetSpeed s) -> CommandPipeline.SetSpeed (decimal s.Multiplier)
-        | ValueSome (AdminPayload.Types.Body.Pause _)    -> CommandPipeline.Pause
-        | ValueSome (AdminPayload.Types.Body.Resume _)   -> CommandPipeline.Resume
+        | ValueSome (AdminPayload.Types.Body.Pause _)    -> Ok CommandPipeline.Pause
+        | ValueSome (AdminPayload.Types.Body.Resume _)   -> Ok CommandPipeline.Resume
         | ValueSome (AdminPayload.Types.Body.GrantResources g) ->
-            CommandPipeline.GrantResources (g.PlayerId, toCoreResOpt g.Resources)
-        | ValueSome (AdminPayload.Types.Body.OverrideVision v) ->
-            CommandPipeline.OverrideVision (v.PlayerId, toCoreVision v.Mode)
-        | ValueSome (AdminPayload.Types.Body.OverrideVictory v) ->
-            CommandPipeline.OverrideVictory (v.PlayerId, toCoreVictory v.Outcome)
-        | ValueNone -> CommandPipeline.Pause
+            match g.Resources with
+            | ValueSome resources when g.PlayerId = 0 && finite64 resources.Metal && finite64 resources.Energy
+                                       && abs resources.Metal <= float Single.MaxValue
+                                       && abs resources.Energy <= float Single.MaxValue ->
+                Ok (CommandPipeline.GrantResources (g.PlayerId, { metal = resources.Metal; energy = resources.Energy }))
+            | _ -> invalid "resource grant requires finite resources and the supported team target"
+        | ValueSome _ -> Error CommandPipeline.AdminNotAvailable
+        | ValueNone -> invalid "admin command body is missing"
 
-    let toCoreCommand (msg: Command) : CommandPipeline.Command =
-        let kind =
-            match msg.Kind with
-            | ValueSome (Command.Types.Kind.Gameplay gp) -> CommandPipeline.Gameplay (toCoreGameplay gp)
-            | ValueSome (Command.Types.Kind.Admin ap)    -> CommandPipeline.Admin (toCoreAdmin ap)
-            | ValueNone -> CommandPipeline.Gameplay (CommandPipeline.Custom ("", [||]))
+    let tryToCoreCommand (msg: Command) : Result<CommandPipeline.Command, CommandPipeline.RejectReason> =
         let cid = bytesToGuid msg.CommandId
-        let target = if msg.TargetSlot = 0 then None else Some msg.TargetSlot
-        { commandId = (if cid = Guid.Empty then Guid.NewGuid() else cid)
-          originatingClient = ScriptingClientId msg.OriginatingClient
-          targetSlot = target
-          kind = kind
-          submittedAt = DateTimeOffset.FromUnixTimeMilliseconds(msg.SubmittedAtUnixMs) }
+        if cid = Guid.Empty then invalid "command id must be a nonzero 16-byte UUID"
+        elif String.IsNullOrWhiteSpace msg.OriginatingClient then invalid "originating client is required"
+        elif msg.TargetSlot < 0 then invalid "target slot cannot be negative"
+        elif msg.SubmittedAtUnixMs <= 0L then invalid "submitted time must be a positive Unix millisecond timestamp"
+        else
+          let kind =
+            match msg.Kind with
+            | ValueSome (Command.Types.Kind.Gameplay gp) -> toCoreGameplay gp |> Result.map CommandPipeline.Gameplay
+            | ValueSome (Command.Types.Kind.Admin ap)    -> toCoreAdmin ap |> Result.map CommandPipeline.Admin
+            | ValueNone -> invalid "command kind is missing"
+          kind |> Result.bind (fun decoded ->
+              try
+                  Ok { commandId = cid
+                       originatingClient = ScriptingClientId msg.OriginatingClient
+                       targetSlot = if msg.TargetSlot = 0 then None else Some msg.TargetSlot
+                       kind = decoded
+                       submittedAt = DateTimeOffset.FromUnixTimeMilliseconds(msg.SubmittedAtUnixMs) }
+              with :? ArgumentOutOfRangeException -> invalid "submitted time is outside the supported range")
 
     let toReject
         (reason: CommandPipeline.RejectReason)
@@ -452,7 +498,7 @@ module WireConvert =
         cb.ClientCommandId <- ValueSome lower
         cb
 
-    let tryFromCoreCommandToHighBar
+    let private mapValidatedCoreCommandToHighBar
         (command: CommandPipeline.Command)
         (batchSeq: uint64)
         : Result<Highbar.V1.CommandBatch, CommandPipeline.RejectReason> =
@@ -500,9 +546,10 @@ module WireConvert =
                 let ai = Highbar.V1.AICommand.empty()
                 ai.Stop <- s
                 Ok (commandBatch batchSeq target command.commandId [ai])
-            | CommandPipeline.Guard, _, _ ->
+            | CommandPipeline.Guard, Some tid, None ->
                 let g = Highbar.V1.GuardCommand.empty()
                 g.UnitId <- firstUnit uids
+                g.GuardUnitId <- int tid
                 let ai = Highbar.V1.AICommand.empty()
                 ai.Guard <- g
                 Ok (commandBatch batchSeq target command.commandId [ai])
@@ -515,12 +562,13 @@ module WireConvert =
                 Ok (commandBatch batchSeq target command.commandId [ai])
             | CommandPipeline.Patrol, _, None ->
                 Error (CommandPipeline.InvalidPayload "Patrol requires targetPos")
+            | _ ->
+                Error (CommandPipeline.InvalidPayload "unit order has missing or ambiguous target fields")
         | CommandPipeline.Gameplay (CommandPipeline.Build (builderId, classId, pos)) ->
             let b = Highbar.V1.BuildUnitCommand.empty()
             b.UnitId <- int builderId
-            // classId is a class name (string) on the Core side; HighBar
-            // expects an int unit-def id. Try parse; fall back to 0 if the
-            // string is not numeric. Real translation needs a class/def map.
+            // The admission wrapper verifies that classId is a positive
+            // native definition id before this conversion runs.
             let mutable defId = 0
             System.Int32.TryParse(classId, &defId) |> ignore
             b.ToBuildUnitDefId <- defId
@@ -569,3 +617,48 @@ module WireConvert =
         | CommandPipeline.Admin (CommandPipeline.OverrideVision _)
         | CommandPipeline.Admin (CommandPipeline.OverrideVictory _) ->
             Error CommandPipeline.AdminNotAvailable
+
+    let tryFromCoreCommandToHighBar
+        (command: CommandPipeline.Command)
+        (batchSeq: uint64)
+        : Result<Highbar.V1.CommandBatch, CommandPipeline.RejectReason> =
+        let nativeId name id = validNativeId name id
+        let finitePos (pos: Snapshot.Vec2) = finite32 pos.x && finite32 pos.y
+        let validateKind =
+            match command.kind with
+            | CommandPipeline.Gameplay (CommandPipeline.UnitOrder (ids, kind, pos, targetId)) ->
+                match ids with
+                | [unitId] ->
+                    nativeId "unit id" unitId
+                    |> Result.bind (fun () ->
+                        match targetId with
+                        | Some id -> nativeId "target unit id" id
+                        | None -> Ok ())
+                    |> Result.bind (fun () ->
+                        if pos |> Option.exists (finitePos >> not) then invalid "target position has non-finite coordinates"
+                        else
+                            match kind, pos, targetId with
+                            | CommandPipeline.Move, Some _, None
+                            | CommandPipeline.Patrol, Some _, None
+                            | CommandPipeline.Stop, None, None
+                            | CommandPipeline.Attack, Some _, None
+                            | CommandPipeline.Attack, None, Some _
+                            | CommandPipeline.Guard, None, Some _ -> Ok ()
+                            | _ -> invalid "unit order has missing or ambiguous target fields")
+                | [] -> invalid "unit order has no acting unit"
+                | _ -> invalid "multi-unit order requires explicit per-unit expansion"
+            | CommandPipeline.Gameplay (CommandPipeline.Build (builderId, classId, pos)) ->
+                nativeId "builder id" builderId
+                |> Result.bind (fun () ->
+                    let mutable defId = 0
+                    if Int32.TryParse(classId, &defId) && defId > 0 && finitePos pos then Ok ()
+                    else invalid "build requires a positive native definition id and finite position")
+            | CommandPipeline.Gameplay (CommandPipeline.Custom _) ->
+                invalid "custom gameplay commands have no supported native mapping"
+            | CommandPipeline.Admin (CommandPipeline.GrantResources (playerId, resources)) ->
+                if playerId = 0 && finite64 resources.metal && finite64 resources.energy
+                   && abs resources.metal <= float Single.MaxValue
+                   && abs resources.energy <= float Single.MaxValue then Ok ()
+                else invalid "resource grant requires finite resources and the supported team target"
+            | _ -> Ok ()
+        validateKind |> Result.bind (fun () -> mapValidatedCoreCommandToHighBar command batchSeq)

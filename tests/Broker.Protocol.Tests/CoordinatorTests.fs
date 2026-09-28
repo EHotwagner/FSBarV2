@@ -340,19 +340,20 @@ let commandTranslationTests =
         }
 
         test "Stop / Guard maps to corresponding AICommand arms" {
-            for kind, _label in [
-                CommandPipeline.Stop, "stop"
-                CommandPipeline.Guard, "guard" ] do
+            for kind, targetId in [
+                CommandPipeline.Stop, None
+                CommandPipeline.Guard, Some 9u ] do
                 let cmd =
                     mkCoreCommand
                         (CommandPipeline.Gameplay
-                            (CommandPipeline.UnitOrder ([1u], kind, None, None)))
+                            (CommandPipeline.UnitOrder ([1u], kind, None, targetId)))
                 match WireConvert.tryFromCoreCommandToHighBar cmd 4UL with
                 | Ok batch ->
                     let ai = firstAi batch
                     match ai.Command, kind with
                     | ValueSome (AICommand.Types.Command.Stop _), CommandPipeline.Stop -> ()
-                    | ValueSome (AICommand.Types.Command.Guard _), CommandPipeline.Guard -> ()
+                    | ValueSome (AICommand.Types.Command.Guard guard), CommandPipeline.Guard ->
+                        Expect.equal guard.GuardUnitId 9 "guard target survives conversion"
                     | got, _ -> failtestf "wrong AICommand arm for %A: %A" kind got
                 | Error r -> failtestf "unexpected reject for %A: %A" kind r
         }
@@ -403,18 +404,36 @@ let commandTranslationTests =
             | Error r -> failtestf "unexpected reject: %A" r
         }
 
-        test "Custom maps to AICommand.Custom" {
+        test "Custom rejects because native semantics are not defined" {
             let cmd =
                 mkCoreCommand
                     (CommandPipeline.Gameplay
                         (CommandPipeline.Custom ("ping", [| 0uy; 0uy; 0uy; 0uy |])))
             match WireConvert.tryFromCoreCommandToHighBar cmd 7UL with
-            | Ok batch ->
-                let ai = firstAi batch
-                match ai.Command with
-                | ValueSome (AICommand.Types.Command.Custom _) -> ()
-                | other -> failtestf "expected Custom, got %A" other
-            | Error r -> failtestf "unexpected reject: %A" r
+            | Error (CommandPipeline.InvalidPayload _) -> ()
+            | other -> failtestf "expected InvalidPayload, got %A" other
+        }
+
+        test "multi-unit order and invalid native identifiers reject before mapping" {
+            for ids in [ []; [1u; 2u]; [UInt32.MaxValue] ] do
+                let cmd =
+                    mkCoreCommand
+                        (CommandPipeline.Gameplay
+                            (CommandPipeline.UnitOrder (ids, CommandPipeline.Move, Some { x = 1.0f; y = 2.0f }, None)))
+                match WireConvert.tryFromCoreCommandToHighBar cmd 8UL with
+                | Error (CommandPipeline.InvalidPayload _) -> ()
+                | other -> failtestf "expected InvalidPayload for %A, got %A" ids other
+        }
+
+        test "nonnumeric build definition and non-finite position reject" {
+            let invalidKinds = [
+                CommandPipeline.Build (10u, "armmex", { x = 1.0f; y = 2.0f })
+                CommandPipeline.Build (10u, "42", { x = Single.NaN; y = 2.0f }) ]
+            for kind in invalidKinds do
+                let cmd = mkCoreCommand (CommandPipeline.Gameplay kind)
+                match WireConvert.tryFromCoreCommandToHighBar cmd 8UL with
+                | Error (CommandPipeline.InvalidPayload _) -> ()
+                | other -> failtestf "expected InvalidPayload, got %A" other
         }
 
         test "Move without targetPos rejects with InvalidPayload" {

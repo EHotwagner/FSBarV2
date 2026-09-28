@@ -148,34 +148,48 @@ module ScriptingClientService =
             try
                 while! request.MoveNext(context.CancellationToken) do
                     let wire = request.Current
-                    let cmd = WireConvert.toCoreCommand wire
-                    let id = cmd.originatingClient
-                    match BrokerState.tryGetClient id hub with
-                    | None ->
-                        // Out-of-band: writer didn't call Hello.
+                    match WireConvert.tryToCoreCommand wire with
+                    | Error reason ->
+                        // An invalid or unsupported command never reaches either
+                        // broker queue. Echo the exact submitted wire identity.
                         let ack = CommandAck.empty()
                         ack.CommandId <- wire.CommandId
                         ack.Accepted <- false
-                        ack.Reject <-
-                            ValueSome (
-                                WireConvert.toReject
-                                    (CommandPipeline.InvalidPayload "client not registered; call Hello first")
-                                    (Some cmd.commandId)
-                                    None)
+                        let correlation =
+                            if wire.CommandId.Length = 16 then
+                                let id = Guid(wire.CommandId.ToByteArray())
+                                if id = Guid.Empty then None else Some id
+                            else None
+                        ack.Reject <- ValueSome (WireConvert.toReject reason correlation None)
                         do! response.WriteAsync(ack)
-                    | Some client ->
-                        let result = BrokerState.admitScriptingCommand client cmd hub
-                        let ack = CommandAck.empty()
-                        ack.CommandId <- wire.CommandId
-                        ack.Accepted <- result.accepted
-                        match result.reject with
-                        | Some r ->
-                            (BrokerState.auditEmitter hub) (
-                                Audit.AuditEvent.CommandRejected (
-                                    DateTimeOffset.UtcNow, id, cmd.commandId, r))
-                            ack.Reject <- ValueSome (WireConvert.toReject r (Some cmd.commandId) None)
-                        | None -> ()
-                        do! response.WriteAsync(ack)
+                    | Ok cmd ->
+                        let id = cmd.originatingClient
+                        match BrokerState.tryGetClient id hub with
+                        | None ->
+                            // Out-of-band: writer didn't call Hello.
+                            let ack = CommandAck.empty()
+                            ack.CommandId <- wire.CommandId
+                            ack.Accepted <- false
+                            ack.Reject <-
+                                ValueSome (
+                                    WireConvert.toReject
+                                        (CommandPipeline.InvalidPayload "client not registered; call Hello first")
+                                        (Some cmd.commandId)
+                                        None)
+                            do! response.WriteAsync(ack)
+                        | Some client ->
+                            let result = BrokerState.admitScriptingCommand client cmd hub
+                            let ack = CommandAck.empty()
+                            ack.CommandId <- wire.CommandId
+                            ack.Accepted <- result.accepted
+                            match result.reject with
+                            | Some r ->
+                                (BrokerState.auditEmitter hub) (
+                                    Audit.AuditEvent.CommandRejected (
+                                        DateTimeOffset.UtcNow, id, cmd.commandId, r))
+                                ack.Reject <- ValueSome (WireConvert.toReject r (Some cmd.commandId) None)
+                            | None -> ()
+                            do! response.WriteAsync(ack)
             with
             | :? OperationCanceledException -> ()
         } :> Task

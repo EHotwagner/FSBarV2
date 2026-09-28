@@ -10,7 +10,9 @@ open FSBarV2.Broker.Contracts
 /// shape stay an implementation detail (data-model.md §4).
 module WireConvert =
 
-    val toCoreCommand      : msg:Command -> CommandPipeline.Command
+    /// Decode only commands whose complete intent has a supported native mapping.
+    /// Invalid wire payloads are refused before broker admission.
+    val tryToCoreCommand   : msg:Command -> Result<CommandPipeline.Command, CommandPipeline.RejectReason>
     val toCoreVersion      : msg:ProtocolVersion -> Version
 
     /// Same as `toCoreVersion` but defaults to 0.0 when the optional

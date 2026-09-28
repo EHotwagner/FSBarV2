@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <Compile Include="ProtoPinTests.fs" />
+    <Compile Include="CommonProtoTests.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
